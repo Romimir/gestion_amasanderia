@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gestion_amasanderia/screens/order_from_screen.dart';
+import 'package:gestion_amasanderia/screens/order_list_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -49,6 +50,7 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 40),
 
+              // boton para agendar pedido
               SizedBox(
                 width: double.infinity, 
                 height: 55,
@@ -72,8 +74,12 @@ class DashboardScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton.icon(
-                  onPressed: null, //boton deshabilitado por ahora
-                  icon: const Icon(Icons.calendar_today),
+                    onPressed: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => OrderListScreen()),
+                    );
+                    },                  icon: const Icon(Icons.calendar_today),
                   label: const Text(
                     'Ver Pedidos',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
