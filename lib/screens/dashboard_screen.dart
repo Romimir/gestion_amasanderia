@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gestion_amasanderia/screens/order_from_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -39,7 +40,7 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                '🥖 Amasandería en marcha 🥖',
+                'Amasandería en marcha', //despues cambiar a turno
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -52,8 +53,12 @@ class DashboardScreen extends StatelessWidget {
                 width: double.infinity, 
                 height: 55,
                 child: ElevatedButton.icon(
-                  onPressed: null, //boton deshabilitado por ahora
-                  icon: const Icon(Icons.edit_document),
+                    onPressed: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const OrderFormScreen()),
+                    );
+                    },                  icon: const Icon(Icons.edit_document),
                   label: const Text(
                     'Agendar Pedido',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
