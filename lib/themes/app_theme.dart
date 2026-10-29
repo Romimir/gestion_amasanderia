@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Creamos una propiedad estática para poder llamarla sin instanciar la clase
   static ThemeData get lightTheme {
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),

@@ -105,7 +105,6 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
               ),
               const SizedBox(height: 24),
 
-              // --- DATOS DEL CLIENTE ---
               _buildSectionTitle('DATOS DEL CLIENTE'),
               Card(
                 child: Padding(
@@ -150,7 +149,6 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // --- FECHA Y HORA DE RETIRO SIMPLIFICADA ---
               _buildSectionTitle('FECHA Y HORA DE RETIRO'),
               Card(
                 child: Padding(
@@ -287,7 +285,6 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // --- ESTADO DE PAGO ---
               _buildSectionTitle('ESTADO DE PAGO'),
               Card(
                 child: Padding(
@@ -316,7 +313,6 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
               ),
               const SizedBox(height: 24),
 
-              // --- RESUMEN FINAL ---
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -338,7 +334,6 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
               ),
               const SizedBox(height: 24),
 
-              // --- BOTÓN GUARDAR ---
               ElevatedButton.icon(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
