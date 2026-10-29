@@ -1,5 +1,5 @@
+import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
 import '../models/order_model.dart';
 
 class DatabaseService {
@@ -10,16 +10,16 @@ class DatabaseService {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('amasanderia_poc.db');
+    _database = await _initDB('amasanderia.db');
     return _database!;
   }
 
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
-    final fullPath = join(dbPath, filePath);
+    final dbLocation = path.join(dbPath, filePath);
 
     return await openDatabase(
-      fullPath,
+      dbLocation,
       version: 1,
       onCreate: _createDB,
     );
@@ -51,5 +51,33 @@ class DatabaseService {
     final db = await instance.database;
     final result = await db.query('pedidos', orderBy: 'id DESC');
     return result.map((json) => Order.fromMap(json)).toList();
+  }
+
+  Future<void> clearPedidos() async {
+    final db = await instance.database;
+    await db.delete('pedidos');
+    await db.delete('sqlite_sequence', where: 'name = ?', whereArgs: ['pedidos']);
+  }
+
+  // Eliminar un pedido individual por ID
+  Future<int> deletePedido(int id) async {
+    final db = await instance.database;
+    return await db.delete('pedidos', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Actualizar un pedido existente por ID
+  Future<int> updatePedido(Order pedido) async {
+    final db = await instance.database;
+    return await db.update(
+      'pedidos',
+      pedido.toMap(),
+      where: 'id = ?',
+      whereArgs: [pedido.id],
+    );
+  }
+
+  Future<void> close() async {
+    final db = await instance.database;
+    db.close();
   }
 }
