@@ -11,104 +11,119 @@ class OrderListScreen extends StatefulWidget {
 }
 
 class _OrderListScreenState extends State<OrderListScreen> {
-  List<Order> _pedidos = [];
-  List<String> _fechasDisponibles = [];
-  Set<String> _fechasConPedidosSet = {};
-  int _indiceFechaSeleccionada = 0;
+  late DateTime _fechaSeleccionada;
+  List<Order> _todosLosPedidos = [];
   bool _cargando = true;
-  String? _errorCarga;
 
   @override
   void initState() {
     super.initState();
+    final ahora = DateTime.now();
+    _fechaSeleccionada = DateTime(ahora.year, ahora.month, ahora.day);
     _cargarPedidos();
   }
 
-  /// Convierte cualquier fecha (ej. 2026-10-29) al formato chileno dd/mm/aaaa
-  String _normalizarFecha(String raw) {
-    final limpia = raw.trim();
-    if (limpia.contains('-')) {
-      final partes = limpia.split('-');
-      if (partes.length == 3 && partes[0].length == 4) {
-        final dia = partes[2].padLeft(2, '0');
-        final mes = partes[1].padLeft(2, '0');
-        final anio = partes[0];
-        return '$dia/$mes/$anio';
-      }
+  Future<void> _cargarPedidos() async {
+    setState(() => _cargando = true);
+    try {
+      final pedidos = await DatabaseHelper.instance.getPedidos();
+      if (!mounted) return;
+      setState(() {
+        _todosLosPedidos = pedidos;
+        _cargando = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _cargando = false);
     }
-    return limpia;
   }
 
-  DateTime _parseFecha(String fechaStr) {
-    final normalizada = _normalizarFecha(fechaStr);
-    final partes = normalizada.split('/');
-    if (partes.length == 3) {
-      return DateTime(
-        int.tryParse(partes[2]) ?? 2000,
-        int.tryParse(partes[1]) ?? 1,
-        int.tryParse(partes[0]) ?? 1,
-      );
-    }
-    return DateTime(2000);
-  }
-
-  String _formatFecha(DateTime fecha) {
+  String _formatearFecha(DateTime fecha) {
     final String dia = fecha.day.toString().padLeft(2, '0');
     final String mes = fecha.month.toString().padLeft(2, '0');
     final String anio = fecha.year.toString();
     return '$dia/$mes/$anio';
   }
 
-  Future<void> _cargarPedidos() async {
-    setState(() {
-      _cargando = true;
-      _errorCarga = null;
-    });
-
-    try {
-      final String? fechaPrevia = _fechasDisponibles.isNotEmpty
-          ? _fechasDisponibles[_indiceFechaSeleccionada]
-          : null;
-
-      final lista = await DatabaseHelper.instance.getPedidos();
-
-      if (!mounted) return;
-
-      final fechasSet = lista.map((p) => _normalizarFecha(p.fecha)).toSet();
-      final fechasOrdenadas = fechasSet.toList()
-        ..sort((a, b) => _parseFecha(a).compareTo(_parseFecha(b)));
-
-      int nuevoIndice = 0;
-      if (fechasOrdenadas.isNotEmpty) {
-        if (fechaPrevia != null && fechasOrdenadas.contains(fechaPrevia)) {
-          nuevoIndice = fechasOrdenadas.indexOf(fechaPrevia);
-        } else if (_indiceFechaSeleccionada < fechasOrdenadas.length) {
-          nuevoIndice = _indiceFechaSeleccionada;
-        }
+  String _normalizarFecha(String fechaRaw) {
+    final limpia = fechaRaw.trim();
+    if (limpia.contains('/')) {
+      final partes = limpia.split('/');
+      if (partes.length == 3) {
+        final dia = partes[0].padLeft(2, '0');
+        final mes = partes[1].padLeft(2, '0');
+        final anio = partes[2];
+        return '$dia/$mes/$anio';
       }
-
-      setState(() {
-        _pedidos = lista;
-        _fechasConPedidosSet = fechasSet;
-        _fechasDisponibles = fechasOrdenadas;
-        _indiceFechaSeleccionada = nuevoIndice;
-        _cargando = false;
-      });
-    } catch (e, stack) {
-      debugPrint('Error cargando pedidos desde SQLite: $e\n$stack');
-      if (!mounted) return;
-      setState(() {
-        _errorCarga = e.toString();
-        _cargando = false;
-      });
+    } else if (limpia.contains('-')) {
+      final soloFecha = limpia.split('T').first.split(' ').first;
+      final partes = soloFecha.split('-');
+      if (partes.length == 3 && partes[0].length == 4) {
+        final anio = partes[0];
+        final mes = partes[1].padLeft(2, '0');
+        final dia = partes[2].padLeft(2, '0');
+        return '$dia/$mes/$anio';
+      }
     }
+    return limpia;
   }
 
-  Future<void> _abrirCalendarioFiltrado(Color colorPrimario) async {
-    final String fechaActualStr = _fechasDisponibles[_indiceFechaSeleccionada];
-    final DateTime fechaInicial = _parseFecha(fechaActualStr);
-    final DateTime primeraFecha = _parseFecha(_fechasDisponibles.first);
-    final DateTime ultimaFecha = _parseFecha(_fechasDisponibles.last);
+  DateTime? _parseFecha(String fechaStr) {
+    final normalizada = _normalizarFecha(fechaStr);
+    final partes = normalizada.split('/');
+    if (partes.length == 3) {
+      final dia = int.tryParse(partes[0]);
+      final mes = int.tryParse(partes[1]);
+      final anio = int.tryParse(partes[2]);
+      if (dia != null && mes != null && anio != null) {
+        return DateTime(anio, mes, dia);
+      }
+    }
+    return null;
+  }
+
+  void _cambiarDia(int dias) {
+    setState(() {
+      _fechaSeleccionada = DateTime(
+        _fechaSeleccionada.year,
+        _fechaSeleccionada.month,
+        _fechaSeleccionada.day + dias,
+      );
+    });
+  }
+
+  Future<void> _seleccionarFecha(Color colorPrimario) async {
+    final Set<DateTime> fechasConPedidos = {};
+    for (final pedido in _todosLosPedidos) {
+      final fecha = _parseFecha(pedido.fecha);
+      if (fecha != null) {
+        fechasConPedidos.add(DateTime(fecha.year, fecha.month, fecha.day));
+      }
+    }
+
+    final ahora = DateTime.now();
+    final DateTime hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    DateTime mesVisible = DateTime(
+      _fechaSeleccionada.year,
+      _fechaSeleccionada.month,
+      1,
+    );
+
+    const List<String> meses = [
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
+    ];
+    const List<String> diasSemana = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
     await showDialog<void>(
       context: context,
@@ -121,68 +136,269 @@ class _OrderListScreenState extends State<OrderListScreen> {
           ),
           child: SizedBox(
             width: 328,
-            child: Theme(
-              data: Theme.of(context).copyWith(
-                colorScheme: ColorScheme.light(
-                  primary: colorPrimario,
-                  onPrimary: Colors.white,
-                  onSurface: Colors.black87,
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
-                    decoration: BoxDecoration(
-                      color: colorPrimario,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
+            child: StatefulBuilder(
+              builder: (context, setDialogState) {
+                final DateTime primerDiaMes =
+                    DateTime(mesVisible.year, mesVisible.month, 1);
+                final int diasEnMes =
+                    DateTime(mesVisible.year, mesVisible.month + 1, 0).day;
+                final int espaciosIniciales = primerDiaMes.weekday - 1;
+                final int totalCeldas = espaciosIniciales + diasEnMes;
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // --- CABECERA MORADA IDÉNTICA AL FORMULARIO ---
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
+                      decoration: BoxDecoration(
+                        color: colorPrimario,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16),
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Días con pedidos agendados',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Seleccionar fecha',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white),
-                          tooltip: 'Cerrar',
-                          onPressed: () => Navigator.pop(dialogContext),
-                        ),
-                      ],
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            tooltip: 'Cerrar',
+                            onPressed: () => Navigator.pop(dialogContext),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(
-                    height: 330,
-                    child: CalendarDatePicker(
-                      initialDate: fechaInicial,
-                      currentDate: fechaInicial,
-                      firstDate: primeraFecha,
-                      lastDate: ultimaFecha,
-                      selectableDayPredicate: (day) {
-                        return _fechasConPedidosSet.contains(_formatFecha(day));
-                      },
-                      onDateChanged: (fechaElegida) {
-                        final String fechaFormateada = _formatFecha(fechaElegida);
-                        final int nuevoIndice =
-                            _fechasDisponibles.indexOf(fechaFormateada);
-                        if (nuevoIndice != -1) {
-                          setState(() => _indiceFechaSeleccionada = nuevoIndice);
-                        }
-                        Navigator.pop(dialogContext);
-                      },
+
+                    // --- NAVEGACIÓN DE MES Y AÑO ---
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left),
+                            tooltip: 'Mes anterior',
+                            onPressed: () {
+                              setDialogState(() {
+                                mesVisible = DateTime(
+                                  mesVisible.year,
+                                  mesVisible.month - 1,
+                                  1,
+                                );
+                              });
+                            },
+                          ),
+                          Text(
+                            '${meses[mesVisible.month - 1]} ${mesVisible.year}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right),
+                            tooltip: 'Mes siguiente',
+                            onPressed: () {
+                              setDialogState(() {
+                                mesVisible = DateTime(
+                                  mesVisible.year,
+                                  mesVisible.month + 1,
+                                  1,
+                                );
+                              });
+                            },
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+
+                    // --- INICIALES DÍAS DE LA SEMANA ---
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: diasSemana
+                            .map(
+                              (dia) => Expanded(
+                                child: Center(
+                                  child: Text(
+                                    dia,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+
+                    // --- CUADRÍCULA DE DÍAS ---
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: totalCeldas,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 4,
+                          crossAxisSpacing: 4,
+                        ),
+                        itemBuilder: (context, index) {
+                          if (index < espaciosIniciales) {
+                            return const SizedBox.shrink();
+                          }
+
+                          final int diaNumero = index - espaciosIniciales + 1;
+                          final DateTime fechaCelda = DateTime(
+                            mesVisible.year,
+                            mesVisible.month,
+                            diaNumero,
+                          );
+
+                          final bool esSeleccionado =
+                              fechaCelda.year == _fechaSeleccionada.year &&
+                              fechaCelda.month == _fechaSeleccionada.month &&
+                              fechaCelda.day == _fechaSeleccionada.day;
+
+                          final bool esHoy = fechaCelda.year == hoy.year &&
+                              fechaCelda.month == hoy.month &&
+                              fechaCelda.day == hoy.day;
+
+                          final bool tienePedidos =
+                              fechasConPedidos.contains(fechaCelda);
+
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () {
+                              setState(() {
+                                _fechaSeleccionada = fechaCelda;
+                              });
+                              Navigator.pop(dialogContext);
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: esSeleccionado
+                                    ? colorPrimario
+                                    : (tienePedidos
+                                        ? colorPrimario.withValues(alpha: 0.12)
+                                        : Colors.transparent),
+                                border: esSeleccionado
+                                    ? null
+                                    : tienePedidos
+                                        ? Border.all(
+                                            color: colorPrimario,
+                                            width: 1.5,
+                                          )
+                                        : (esHoy
+                                            ? Border.all(
+                                                color: Colors.black54,
+                                                width: 1,
+                                              )
+                                            : null),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '$diaNumero',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: (esSeleccionado ||
+                                              tienePedidos ||
+                                              esHoy)
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: esSeleccionado
+                                          ? Colors.white
+                                          : (tienePedidos
+                                              ? colorPrimario
+                                              : Colors.black87),
+                                    ),
+                                  ),
+                                  if (tienePedidos)
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 1),
+                                      width: 4,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: esSeleccionado
+                                            ? Colors.white
+                                            : colorPrimario,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    // --- LEYENDA Y ACCESO RÁPIDO A HOY ---
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 12, 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: colorPrimario.withValues(alpha: 0.12),
+                              border: Border.all(
+                                color: colorPrimario,
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Con pedidos agendados',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _fechaSeleccionada = hoy;
+                              });
+                              Navigator.pop(dialogContext);
+                            },
+                            child: Text(
+                              'Hoy',
+                              style: TextStyle(
+                                color: colorPrimario,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         );
@@ -190,7 +406,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
     );
   }
 
-void _mostrarResumenDelDia(List<Order> pedidosDelDia, Color colorPrimario) {
+  void _mostrarResumenDelDia(List<Order> pedidosDelDia, Color colorPrimario) {
     int hornoCoctel = 0, hornoMediana = 0, hornoGrande = 0;
     int fritaCoctel = 0, fritaMediana = 0, fritaGrande = 0;
 
@@ -297,112 +513,81 @@ void _mostrarResumenDelDia(List<Order> pedidosDelDia, Color colorPrimario) {
     );
   }
 
-  Widget _buildSelectorFechaBar(String fechaActual, Color moradoPrincipal) {
-    final bool hayAnterior = _indiceFechaSeleccionada > 0;
-    final bool haySiguiente =
-        _indiceFechaSeleccionada < _fechasDisponibles.length - 1;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-      color: Colors.grey.shade100,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            icon: Icon(
-              Icons.keyboard_arrow_left,
-              size: 32,
-              color: hayAnterior ? moradoPrincipal : Colors.grey.shade400,
-            ),
-            tooltip: 'Día anterior con pedidos',
-            onPressed: hayAnterior
-                ? () => setState(() => _indiceFechaSeleccionada--)
-                : null,
-          ),
-          InkWell(
-            onTap: () => _abrirCalendarioFiltrado(moradoPrincipal),
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: moradoPrincipal.withValues(alpha: 0.4)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.calendar_month, size: 20, color: moradoPrincipal),
-                  const SizedBox(width: 8),
-                  Text(
-                    fechaActual,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: moradoPrincipal,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.keyboard_arrow_right,
-              size: 32,
-              color: haySiguiente ? moradoPrincipal : Colors.grey.shade400,
-            ),
-            tooltip: 'Día siguiente con pedidos',
-            onPressed: haySiguiente
-                ? () => setState(() => _indiceFechaSeleccionada++)
-                : null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPedidoCard(Order pedido, Color moradoPrincipal) {
+Widget _buildPedidoCard(Order pedido, Color moradoPrincipal) {
     final bool estaPagado = pedido.estadoPago == 'Pagado';
+    final bool mostrarEstadoEntrega = pedido.estadoEntrega != 'Por retirar';
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
           backgroundColor: moradoPrincipal,
           child: const Icon(Icons.receipt, color: Colors.white),
         ),
-        title: Row(
+        title: Text(
+          pedido.cliente,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                pedido.cliente,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
+            const SizedBox(height: 2),
+            Text(
+              '${pedido.cantidad} masas de ${pedido.tipoMasa} ${pedido.medidaMasa} \$${pedido.total}',
             ),
-            if (estaPagado) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'Pagado',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: estaPagado ? Colors.black87 : Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: estaPagado
+                        ? null
+                        : Border.all(color: Colors.black54, width: 1),
+                  ),
+                  child: Text(
+                    estaPagado ? 'Pagado' : 'Por pagar',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: estaPagado ? Colors.white : Colors.black87,
+                    ),
                   ),
                 ),
-              ),
-            ],
+                if (mostrarEstadoEntrega) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: pedido.estadoEntrega == 'Retirado'
+                          ? moradoPrincipal
+                          : Colors.grey.shade700,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      pedido.estadoEntrega,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
-        ),
-        subtitle: Text(
-          '${pedido.cantidad} masas de ${pedido.tipoMasa} - \$${pedido.total}',
         ),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: () async {
@@ -422,89 +607,24 @@ void _mostrarResumenDelDia(List<Order> pedidosDelDia, Color colorPrimario) {
       ),
     );
   }
-
+  
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final moradoPrincipal =
         theme.appBarTheme.backgroundColor ?? theme.colorScheme.primary;
 
-    if (_cargando) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Historial de Pedidos',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-        body: Center(
-          child: CircularProgressIndicator(color: moradoPrincipal),
-        ),
-      );
-    }
+    final String fechaActualStr = _formatearFecha(_fechaSeleccionada);
 
-    if (_errorCarga != null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Historial de Pedidos',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                const SizedBox(height: 12),
-                Text(
-                  'Error al leer la base de datos:\n$_errorCarga',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red, fontSize: 15),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: _cargarPedidos,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (_fechasDisponibles.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Historial de Pedidos',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.receipt_long, size: 56, color: Colors.grey.shade400),
-              const SizedBox(height: 12),
-              Text(
-                'No hay pedidos registrados.',
-                style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final String fechaActual = _fechasDisponibles[_indiceFechaSeleccionada];
-    final List<Order> pedidosDelDia = _pedidos
-        .where((p) => _normalizarFecha(p.fecha) == fechaActual)
-        .toList()
+    final List<Order> pedidosDelDia = _todosLosPedidos.where((pedido) {
+      final fechaPedido = _parseFecha(pedido.fecha);
+      if (fechaPedido != null) {
+        return fechaPedido.year == _fechaSeleccionada.year &&
+            fechaPedido.month == _fechaSeleccionada.month &&
+            fechaPedido.day == _fechaSeleccionada.day;
+      }
+      return _normalizarFecha(pedido.fecha) == fechaActualStr;
+    }).toList()
       ..sort((a, b) => a.hora.compareTo(b.hora));
 
     return Scaffold(
@@ -516,34 +636,123 @@ void _mostrarResumenDelDia(List<Order> pedidosDelDia, Color colorPrimario) {
       ),
       body: Column(
         children: [
-          _buildSelectorFechaBar(fechaActual, moradoPrincipal),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: pedidosDelDia.length,
-              itemBuilder: (context, index) {
-                return _buildPedidoCard(pedidosDelDia[index], moradoPrincipal);
-              },
+          // --- BARRA SELECTORA DE FECHA ---
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.4),
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade300),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon:
+                      Icon(Icons.chevron_left, color: moradoPrincipal, size: 28),
+                  tooltip: 'Día anterior',
+                  onPressed: () => _cambiarDia(-1),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _seleccionarFecha(moradoPrincipal),
+                  icon: Icon(Icons.calendar_today,
+                      size: 18, color: moradoPrincipal),
+                  label: Text(
+                    fechaActualStr,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: moradoPrincipal,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
+                    side: BorderSide(color: moradoPrincipal, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.chevron_right,
+                      color: moradoPrincipal, size: 28),
+                  tooltip: 'Día siguiente',
+                  onPressed: () => _cambiarDia(1),
+                ),
+              ],
             ),
           ),
+
+          // --- LISTA DE PEDIDOS ---
+          Expanded(
+            child: _cargando
+                ? Center(
+                    child: CircularProgressIndicator(color: moradoPrincipal),
+                  )
+                : pedidosDelDia.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                size: 56,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No hay pedidos para el $fechaActualStr',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: pedidosDelDia.length,
+                        itemBuilder: (context, index) {
+                          return _buildPedidoCard(
+                            pedidosDelDia[index],
+                            moradoPrincipal,
+                          );
+                        },
+                      ),
+          ),
+
+          // --- BOTÓN RESUMEN DEL DÍA ---
           SafeArea(
+            top: false,
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
               child: SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () =>
                       _mostrarResumenDelDia(pedidosDelDia, moradoPrincipal),
-                  icon: const Icon(Icons.analytics),
-                  label: const Text(
+                  icon: Icon(Icons.assessment, color: moradoPrincipal),
+                  label: Text(
                     'Ver Total Pedidos del Día',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: moradoPrincipal,
+                    ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    foregroundColor: moradoPrincipal,
-                    side: BorderSide(color: moradoPrincipal, width: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: BorderSide(color: moradoPrincipal, width: 1.5),
+                    shape: const StadiumBorder(),
                   ),
                 ),
               ),

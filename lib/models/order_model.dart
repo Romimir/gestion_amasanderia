@@ -8,6 +8,7 @@ class Order {
   final String medidaMasa;
   final int cantidad;
   final String estadoPago;
+  final String estadoEntrega;
   final int total;
 
   Order({
@@ -20,6 +21,7 @@ class Order {
     required this.medidaMasa,
     required this.cantidad,
     required this.estadoPago,
+    this.estadoEntrega = 'Por retirar',
     required this.total,
   });
 
@@ -34,6 +36,7 @@ class Order {
       'medidaMasa': medidaMasa,
       'cantidad': cantidad,
       'estadoPago': estadoPago,
+      'estadoEntrega': estadoEntrega,
       'total': total,
     };
   }
@@ -49,6 +52,7 @@ class Order {
       medidaMasa: map['medidaMasa'] as String,
       cantidad: map['cantidad'] as int,
       estadoPago: map['estadoPago'] as String,
+      estadoEntrega: (map['estadoEntrega'] as String?) ?? 'Por retirar',
       total: map['total'] as int,
     );
   }
@@ -63,6 +67,7 @@ class Order {
     String? medidaMasa,
     int? cantidad,
     String? estadoPago,
+    String? estadoEntrega,
     int? total,
   }) {
     return Order(
@@ -75,6 +80,7 @@ class Order {
       medidaMasa: medidaMasa ?? this.medidaMasa,
       cantidad: cantidad ?? this.cantidad,
       estadoPago: estadoPago ?? this.estadoPago,
+      estadoEntrega: estadoEntrega ?? this.estadoEntrega,
       total: total ?? this.total,
     );
   }

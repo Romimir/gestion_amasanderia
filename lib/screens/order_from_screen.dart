@@ -4,7 +4,9 @@ import '../database/database_helper.dart';
 import '../models/order_model.dart';
 
 class OrderFormScreen extends StatefulWidget {
-  const OrderFormScreen({super.key});
+  final Order? pedidoEditar;
+
+  const OrderFormScreen({super.key, this.pedidoEditar});
 
   @override
   State<OrderFormScreen> createState() => _OrderFormScreenState();
@@ -15,7 +17,8 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
 
   final TextEditingController _clienteController = TextEditingController();
   final TextEditingController _contactoController = TextEditingController();
-  final TextEditingController _cantidadController = TextEditingController(text: '0');
+  final TextEditingController _cantidadController =
+      TextEditingController(text: '0');
 
   final TextEditingController _fechaController = TextEditingController();
   final TextEditingController _horaController = TextEditingController();
@@ -26,15 +29,68 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
   String _tipoMasa = 'Horno';
   String _medidaMasa = 'Coctel';
   String _estadoPago = 'Por pagar';
+  String _estadoEntrega = 'Por retirar';
   bool _guardando = false;
 
   OverlayEntry? _notificacionActual;
 
+  bool get _esEdicion => widget.pedidoEditar != null;
+
   @override
   void initState() {
     super.initState();
+
+    final pedido = widget.pedidoEditar;
+    if (pedido != null) {
+      _clienteController.text = pedido.cliente;
+
+      final tel = pedido.contacto.trim();
+      if (tel.length == 9 && tel.startsWith('9')) {
+        _contactoController.text = tel.substring(1);
+      } else {
+        _contactoController.text = tel;
+      }
+
+      _fechaController.text = pedido.fecha;
+      _fechaSeleccionada = _parseFecha(pedido.fecha);
+
+      _horaController.text = pedido.hora;
+      _horaSeleccionada = _parseHora(pedido.hora);
+
+      _tipoMasa = pedido.tipoMasa;
+      _medidaMasa = pedido.medidaMasa;
+      _cantidadController.text = pedido.cantidad.toString();
+      _estadoPago = pedido.estadoPago;
+      _estadoEntrega = pedido.estadoEntrega;
+    }
+
     _cantidadController.addListener(() => setState(() {}));
     _clienteController.addListener(() => setState(() {}));
+  }
+
+  DateTime? _parseFecha(String fechaStr) {
+    final partes = fechaStr.trim().split('/');
+    if (partes.length == 3) {
+      final dia = int.tryParse(partes[0]);
+      final mes = int.tryParse(partes[1]);
+      final anio = int.tryParse(partes[2]);
+      if (dia != null && mes != null && anio != null) {
+        return DateTime(anio, mes, dia);
+      }
+    }
+    return null;
+  }
+
+  TimeOfDay? _parseHora(String horaStr) {
+    final partes = horaStr.trim().split(':');
+    if (partes.length == 2) {
+      final hora = int.tryParse(partes[0]);
+      final minuto = int.tryParse(partes[1]);
+      if (hora != null && minuto != null) {
+        return TimeOfDay(hour: hora, minute: minuto);
+      }
+    }
+    return null;
   }
 
   @override
@@ -134,9 +190,13 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
     });
   }
 
-  Future<void> _seleccionarFecha(BuildContext context, Color colorPrimario) async {
+  Future<void> _seleccionarFecha(
+      BuildContext context, Color colorPrimario) async {
     final DateTime hoy = DateTime.now();
-    final DateTime fechaInicial = _fechaSeleccionada ?? hoy;
+    final DateTime hoySinHora = DateTime(hoy.year, hoy.month, hoy.day);
+    final DateTime fechaInicial = _fechaSeleccionada ?? hoySinHora;
+    final DateTime primeraFecha =
+        fechaInicial.isBefore(hoySinHora) ? fechaInicial : hoySinHora;
 
     await showDialog<void>(
       context: context,
@@ -192,11 +252,13 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                     height: 305,
                     child: CalendarDatePicker(
                       initialDate: fechaInicial,
-                      firstDate: DateTime(hoy.year, hoy.month, hoy.day),
+                      firstDate: primeraFecha,
                       lastDate: DateTime(hoy.year + 1),
                       onDateChanged: (fechaElegida) {
-                        final String dia = fechaElegida.day.toString().padLeft(2, '0');
-                        final String mes = fechaElegida.month.toString().padLeft(2, '0');
+                        final String dia =
+                            fechaElegida.day.toString().padLeft(2, '0');
+                        final String mes =
+                            fechaElegida.month.toString().padLeft(2, '0');
                         final String anio = fechaElegida.year.toString();
 
                         setState(() {
@@ -216,7 +278,8 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
     );
   }
 
-  Future<void> _seleccionarHora(BuildContext context, Color colorPrimario) async {
+  Future<void> _seleccionarHora(
+      BuildContext context, Color colorPrimario) async {
     final TimeOfDay? horaElegida = await showTimePicker(
       context: context,
       initialTime: _horaSeleccionada ?? const TimeOfDay(hour: 10, minute: 0),
@@ -243,7 +306,7 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
     if (horaElegida != null) {
       final bool dentroDeHorario =
           (horaElegida.hour >= 10 && horaElegida.hour < 20) ||
-          (horaElegida.hour == 20 && horaElegida.minute == 0);
+              (horaElegida.hour == 20 && horaElegida.minute == 0);
 
       if (!dentroDeHorario) {
         _mostrarNotificacionSuperior(
@@ -298,26 +361,54 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
 
     try {
       final String telefonoDigitos = _contactoController.text.trim();
-      final Order nuevoPedido = Order(
-        cliente: _clienteController.text.trim(),
-        contacto: telefonoDigitos.isNotEmpty ? '9$telefonoDigitos' : '',
-        fecha: _fechaController.text,
-        hora: _horaController.text,
-        tipoMasa: _tipoMasa,
-        medidaMasa: _medidaMasa,
-        cantidad: cantidad,
-        estadoPago: _estadoPago,
-        total: totalMasas,
-      );
+      final String contactoCompleto =
+          telefonoDigitos.isNotEmpty ? '9$telefonoDigitos' : '';
 
-      await DatabaseHelper.instance.insertPedido(nuevoPedido);
+      if (_esEdicion) {
+        final Order pedidoActualizado = widget.pedidoEditar!.copyWith(
+          cliente: _clienteController.text.trim(),
+          contacto: contactoCompleto,
+          fecha: _fechaController.text,
+          hora: _horaController.text,
+          tipoMasa: _tipoMasa,
+          medidaMasa: _medidaMasa,
+          cantidad: cantidad,
+          estadoPago: _estadoPago,
+          estadoEntrega: _estadoEntrega,
+          total: totalMasas,
+        );
 
-      if (!mounted) return;
-      _mostrarNotificacionSuperior(
-        'Pedido registrado con éxito',
-        icono: Icons.check_circle_outline,
-      );
-      Navigator.pop(context, true);
+        await DatabaseHelper.instance.updatePedido(pedidoActualizado);
+
+        if (!mounted) return;
+        _mostrarNotificacionSuperior(
+          'Pedido actualizado con éxito',
+          icono: Icons.check_circle_outline,
+        );
+        Navigator.pop(context, pedidoActualizado);
+      } else {
+        final Order nuevoPedido = Order(
+          cliente: _clienteController.text.trim(),
+          contacto: contactoCompleto,
+          fecha: _fechaController.text,
+          hora: _horaController.text,
+          tipoMasa: _tipoMasa,
+          medidaMasa: _medidaMasa,
+          cantidad: cantidad,
+          estadoPago: _estadoPago,
+          estadoEntrega: 'Por retirar',
+          total: totalMasas,
+        );
+
+        await DatabaseHelper.instance.insertPedido(nuevoPedido);
+
+        if (!mounted) return;
+        _mostrarNotificacionSuperior(
+          'Pedido registrado con éxito',
+          icono: Icons.check_circle_outline,
+        );
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _guardando = false);
@@ -404,9 +495,8 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
       retiroResumen = '${_horaController.text} hrs';
     }
 
-    final String encargoResumen = cantidad > 0
-        ? '$cantidad masas de $_tipoMasa - $_medidaMasa'
-        : '';
+    final String encargoResumen =
+        cantidad > 0 ? '$cantidad masas de $_tipoMasa - $_medidaMasa' : '';
 
     final String subtotalResumen = cantidad > 0
         ? '\$${totalMasas.toStringAsFixed(0)} - $_estadoPago'
@@ -414,9 +504,9 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Nuevo Pedido',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          _esEdicion ? 'Editar Pedido' : 'Nuevo Pedido',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: Padding(
@@ -512,15 +602,17 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                         child: TextFormField(
                           controller: _fechaController,
                           readOnly: true,
-                          onTap: () => _seleccionarFecha(context, moradoPrincipal),
+                          onTap: () =>
+                              _seleccionarFecha(context, moradoPrincipal),
                           decoration: const InputDecoration(
                             labelText: 'Fecha',
                             hintText: 'dd/mm/aaaa',
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.calendar_today),
                           ),
-                          validator: (value) =>
-                              value == null || value.isEmpty ? 'Falta fecha' : null,
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Falta fecha'
+                              : null,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -529,7 +621,8 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                         child: TextFormField(
                           controller: _horaController,
                           readOnly: true,
-                          onTap: () => _seleccionarHora(context, moradoPrincipal),
+                          onTap: () =>
+                              _seleccionarHora(context, moradoPrincipal),
                           decoration: const InputDecoration(
                             labelText: 'Hora',
                             hintText: '10:00 - 20:00',
@@ -738,8 +831,13 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                     : () => _guardarPedido(cantidad, totalMasas),
                 icon: const Icon(Icons.save),
                 label: Text(
-                  _guardando ? 'Guardando...' : 'Guardar Pedido',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  _guardando
+                      ? 'Guardando...'
+                      : (_esEdicion ? 'Guardar Cambios' : 'Guardar Pedido'),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
