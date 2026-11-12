@@ -7,14 +7,65 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tema = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final moradoPrincipal =
+        theme.appBarTheme.backgroundColor ?? theme.colorScheme.primary;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        leading: const Icon(Icons.menu),
         title: const Text(
           'Gestión de Pedidos',
           style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      drawer: Drawer(
+        backgroundColor: Colors.white,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: moradoPrincipal,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Image.asset(
+                    'lib/assets/icons/logo.png',
+                    height: 82,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Amasandería La Lela',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.receipt_long_outlined,
+                color: moradoPrincipal,
+              ),
+              title: const Text(
+                'Gestión de Pedidos',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
         ),
       ),
       body: Center(
@@ -24,11 +75,11 @@ class DashboardScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Logo de la amasandería
-                Image.asset(
+              Image.asset(
                 'lib/assets/icons/logo.png',
                 height: 180,
                 fit: BoxFit.contain,
-                ),
+              ),
               const SizedBox(height: 24),
 
               Text(
@@ -36,12 +87,12 @@ class DashboardScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: tema.primary,
+                  color: moradoPrincipal,
                 ),
               ),
               const SizedBox(height: 8),
               const Text(
-                'Amasandería en marcha', //despues cambiar a turno
+                'Amasandería en marcha', // Despues implementar turnos de trabajo y usuario para que se tenga registrado quien atendio y agendo pedidos
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -50,17 +101,20 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 40),
 
-              // boton para agendar pedido
+              // Botón para agendar pedido
               SizedBox(
-                width: double.infinity, 
+                width: double.infinity,
                 height: 55,
                 child: ElevatedButton.icon(
-                    onPressed: () {
+                  onPressed: () {
                     Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const OrderFormScreen()),
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const OrderFormScreen(),
+                      ),
                     );
-                    },                  icon: const Icon(Icons.edit_document),
+                  },
+                  icon: const Icon(Icons.edit_document),
                   label: const Text(
                     'Agendar Pedido',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -69,17 +123,20 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // boton para ver los pedidos
+              // Botón para ver los pedidos
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton.icon(
-                    onPressed: () {
+                  onPressed: () {
                     Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => OrderListScreen()),
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OrderListScreen(),
+                      ),
                     );
-                    },                  icon: const Icon(Icons.calendar_today),
+                  },
+                  icon: const Icon(Icons.calendar_today),
                   label: const Text(
                     'Ver Pedidos',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

@@ -34,20 +34,118 @@ class _OrderListScreenState extends State<OrderListScreen> {
   ];
 
   List<String> _fechasDisponibles = [];
+  Set<String> _fechasConPedidosSet = {};
   int _indiceFechaSeleccionada = 0;
 
   @override
   void initState() {
     super.initState();
-    _fechasDisponibles = pedidos.map((p) => p.fecha).toSet().toList();
-    _fechasDisponibles.sort((a, b) {
-      int diaA = int.parse(a.substring(0, 2));
-      int diaB = int.parse(b.substring(0, 2));
-      return diaA.compareTo(diaB);
-    });
+    _fechasConPedidosSet = pedidos.map((p) => p.fecha).toSet();
+    _fechasDisponibles = _fechasConPedidosSet.toList()
+      ..sort((a, b) => _parseFecha(a).compareTo(_parseFecha(b)));
   }
 
-  void _mostrarResumenDelDia(List<Order> pedidosDelDia) {
+  DateTime _parseFecha(String fechaStr) {
+    final partes = fechaStr.split('/');
+    return DateTime(
+      int.parse(partes[2]),
+      int.parse(partes[1]),
+      int.parse(partes[0]),
+    );
+  }
+
+  String _formatFecha(DateTime fecha) {
+    final String dia = fecha.day.toString().padLeft(2, '0');
+    final String mes = fecha.month.toString().padLeft(2, '0');
+    final String anio = fecha.year.toString();
+    return '$dia/$mes/$anio';
+  }
+
+  Future<void> _abrirCalendarioFiltrado(Color colorPrimario) async {
+    final DateTime fechaInicial = _parseFecha(_fechasDisponibles[_indiceFechaSeleccionada]);
+    final DateTime primeraFecha = _parseFecha(_fechasDisponibles.first);
+    final DateTime ultimaFecha = _parseFecha(_fechasDisponibles.last);
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: SizedBox(
+            width: 328,
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: ColorScheme.light(
+                  primary: colorPrimario,
+                  onPrimary: Colors.white,
+                  onSurface: Colors.black87,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
+                    decoration: BoxDecoration(
+                      color: colorPrimario,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Días con pedidos agendados',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          tooltip: 'Cerrar',
+                          onPressed: () => Navigator.pop(dialogContext),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 330,
+                    child: CalendarDatePicker(
+                      initialDate: fechaInicial,
+                      currentDate: fechaInicial,
+                      firstDate: primeraFecha,
+                      lastDate: ultimaFecha,
+                      selectableDayPredicate: (day) {
+                        return _fechasConPedidosSet.contains(_formatFecha(day));
+                      },
+                      onDateChanged: (fechaElegida) {
+                        final String fechaFormateada = _formatFecha(fechaElegida);
+                        final int nuevoIndice = _fechasDisponibles.indexOf(fechaFormateada);
+                        if (nuevoIndice != -1) {
+                          setState(() => _indiceFechaSeleccionada = nuevoIndice);
+                        }
+                        Navigator.pop(dialogContext);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _mostrarResumenDelDia(List<Order> pedidosDelDia, Color colorPrimario) {
     int hornoCoctel = 0, hornoMediana = 0, hornoGrande = 0;
     int fritaCoctel = 0, fritaMediana = 0, fritaGrande = 0;
 
@@ -67,19 +165,33 @@ class _OrderListScreenState extends State<OrderListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          'Total Pedidos: ${_fechasDisponibles[_indiceFechaSeleccionada]}',
+          'Total Pedidos: ${pedidosDelDia.length}',
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('HORNO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple, fontSize: 16)),
+            Text(
+              'HORNO',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: colorPrimario,
+                fontSize: 16,
+              ),
+            ),
             Text('    Cóctel: $hornoCoctel unidades'),
             Text('    Mediana: $hornoMediana unidades'),
             Text('    Grande: $hornoGrande unidades'),
             const Divider(height: 24),
-            const Text('FRITA', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple, fontSize: 16)),
+            Text(
+              'FRITA',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: colorPrimario,
+                fontSize: 16,
+              ),
+            ),
             Text('    Cóctel: $fritaCoctel unidades'),
             Text('    Mediana: $fritaMediana unidades'),
             Text('    Grande: $fritaGrande unidades'),
@@ -88,82 +200,179 @@ class _OrderListScreenState extends State<OrderListScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar', style: TextStyle(color: Colors.purple)),
+            child: Text(
+              'Cerrar',
+              style: TextStyle(
+                color: colorPrimario,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildSelectorFechaBar(String fechaActual, Color moradoPrincipal) {
+    final bool hayAnterior = _indiceFechaSeleccionada > 0;
+    final bool haySiguiente = _indiceFechaSeleccionada < _fechasDisponibles.length - 1;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      color: Colors.grey.shade100,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: Icon(
+              Icons.keyboard_arrow_left,
+              size: 32,
+              color: hayAnterior ? moradoPrincipal : Colors.grey.shade400,
+            ),
+            tooltip: 'Día anterior con pedidos',
+            onPressed: hayAnterior
+                ? () => setState(() => _indiceFechaSeleccionada--)
+                : null,
+          ),
+          InkWell(
+            onTap: () => _abrirCalendarioFiltrado(moradoPrincipal),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: moradoPrincipal.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.calendar_month, size: 20, color: moradoPrincipal),
+                  const SizedBox(width: 8),
+                  Text(
+                    fechaActual,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: moradoPrincipal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.keyboard_arrow_right,
+              size: 32,
+              color: haySiguiente ? moradoPrincipal : Colors.grey.shade400,
+            ),
+            tooltip: 'Día siguiente con pedidos',
+            onPressed: haySiguiente
+                ? () => setState(() => _indiceFechaSeleccionada++)
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPedidoCard(Order pedido, Color moradoPrincipal) {
+    final bool estaPagado = pedido.estadoPago == 'Pagado';
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: moradoPrincipal,
+          child: const Icon(Icons.receipt, color: Colors.white),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                pedido.cliente,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (estaPagado) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'Pagado',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        subtitle: Text(
+          '${pedido.cantidad} masas de ${pedido.tipoMasa} - \$${pedido.total}',
+        ),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OrderDetailScreen(pedido: pedido),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final moradoPrincipal =
+        theme.appBarTheme.backgroundColor ?? theme.colorScheme.primary;
+
     if (_fechasDisponibles.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Historial de Pedidos')),
+        appBar: AppBar(
+          title: const Text(
+            'Historial de Pedidos',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
         body: const Center(child: Text('No hay pedidos registrados.')),
       );
     }
 
-    String fechaActual = _fechasDisponibles[_indiceFechaSeleccionada];
-    List<Order> pedidosDelDia = pedidos.where((p) => p.fecha == fechaActual).toList();
+    final String fechaActual = _fechasDisponibles[_indiceFechaSeleccionada];
+    final List<Order> pedidosDelDia = pedidos
+        .where((p) => p.fecha == fechaActual)
+        .toList()
+      ..sort((a, b) => a.hora.compareTo(b.hora));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Historial de Pedidos'),
+        title: const Text(
+          'Historial de Pedidos',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            color: Colors.grey.shade100,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.keyboard_arrow_left, size: 32),
-                  onPressed: _indiceFechaSeleccionada > 0 
-                      ? () => setState(() => _indiceFechaSeleccionada--) 
-                      : null,
-                ),
-                Text(
-                  '  $fechaActual  ',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.purple),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.keyboard_arrow_right, size: 32),
-                  onPressed: _indiceFechaSeleccionada < _fechasDisponibles.length - 1 
-                      ? () => setState(() => _indiceFechaSeleccionada++) 
-                      : null,
-                ),
-              ],
-            ),
-          ),
+          _buildSelectorFechaBar(fechaActual, moradoPrincipal),
           const Divider(height: 1),
           Expanded(
             child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: pedidosDelDia.length,
               itemBuilder: (context, index) {
-                final pedido = pedidosDelDia[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.purple,
-                      child: Icon(Icons.receipt, color: Colors.white),
-                    ),
-                    title: Text(pedido.cliente, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${pedido.cantidad} masas de ${pedido.tipoMasa} - \$${pedido.total}'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => OrderDetailScreen(pedido: pedido),
-                        ),
-                      );
-                    },
-                  ),
-                );
+                return _buildPedidoCard(pedidosDelDia[index], moradoPrincipal);
               },
             ),
           ),
@@ -173,13 +382,16 @@ class _OrderListScreenState extends State<OrderListScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () => _mostrarResumenDelDia(pedidosDelDia),
+                  onPressed: () => _mostrarResumenDelDia(pedidosDelDia, moradoPrincipal),
                   icon: const Icon(Icons.analytics),
-                  label: const Text('Ver Total Pedidos del Día', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Ver Total Pedidos del Día',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    foregroundColor: Colors.purple,
-                    side: const BorderSide(color: Colors.purple, width: 2),
+                    foregroundColor: moradoPrincipal,
+                    side: BorderSide(color: moradoPrincipal, width: 2),
                   ),
                 ),
               ),

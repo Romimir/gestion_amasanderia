@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Amasandería La Lela',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme, // ¡Llamamos al tema modularizado!
+      theme: AppTheme.lightTheme,
       home: const DashboardScreen(), 
     );
   }
