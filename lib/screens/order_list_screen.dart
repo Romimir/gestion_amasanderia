@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../database/database_helper.dart';
 import '../models/order_model.dart';
 import 'order_detail_screen.dart';
 
@@ -10,48 +11,45 @@ class OrderListScreen extends StatefulWidget {
 }
 
 class _OrderListScreenState extends State<OrderListScreen> {
-  final List<Order> pedidos = [
-    Order(cliente: 'Rupertina', contacto: '945612378', fecha: '03/10/2026', hora: '10:00', tipoMasa: 'Horno', medidaMasa: 'Coctel', cantidad: 50, estadoPago: 'Pagado', total: 9500),
-    Order(cliente: 'Ruperto', contacto: '932145687', fecha: '03/10/2026', hora: '11:00', tipoMasa: 'Frita', medidaMasa: 'Mediana', cantidad: 70, estadoPago: 'Por pagar', total: 14000),
-    Order(cliente: 'Marisol', contacto: '912348765', fecha: '03/10/2026', hora: '10:00', tipoMasa: 'Horno', medidaMasa: 'Mediana', cantidad: 450, estadoPago: 'Pagado', total: 94500),
-    Order(cliente: 'Juan Perez', contacto: '988776655', fecha: '03/10/2026', hora: '13:00', tipoMasa: 'Frita', medidaMasa: 'Grande', cantidad: 600, estadoPago: 'Por pagar', total: 132000),
-    Order(cliente: 'Juan Gabriel', contacto: '999888777', fecha: '03/10/2026', hora: '16:00', tipoMasa: 'Horno', medidaMasa: 'Coctel', cantidad: 1000, estadoPago: 'Pagado', total: 190000),
-    Order(cliente: 'Miguel Bose', contacto: '944332211', fecha: '03/10/2026', hora: '18:00', tipoMasa: 'Frita', medidaMasa: 'Mediana', cantidad: 800, estadoPago: 'Por pagar', total: 160000),
-
-    Order(cliente: 'Lorenzo Gutierrez', contacto: '978541236', fecha: '04/10/2026', hora: '12:00', tipoMasa: 'Frita', medidaMasa: 'Coctel', cantidad: 90, estadoPago: 'Pagado', total: 16200),
-    Order(cliente: 'El rey de la empanada', contacto: '911223344', fecha: '04/10/2026', hora: '14:00', tipoMasa: 'Horno', medidaMasa: 'Grande', cantidad: 800, estadoPago: 'Por pagar', total: 176000),
-    Order(cliente: 'Miranda Rosa', contacto: '955443322', fecha: '04/10/2026', hora: '11:00', tipoMasa: 'Horno', medidaMasa: 'Grande', cantidad: 1200, estadoPago: 'Pagado', total: 264000),
-    Order(cliente: 'Municipalidad', contacto: '922114455', fecha: '04/10/2026', hora: '14:00', tipoMasa: 'Frita', medidaMasa: 'Coctel', cantidad: 2000, estadoPago: 'Por pagar', total: 360000),
-    Order(cliente: 'Club de Surf', contacto: '966554433', fecha: '04/10/2026', hora: '16:00', tipoMasa: 'Horno', medidaMasa: 'Mediana', cantidad: 500, estadoPago: 'Pagado', total: 105000),
-    Order(cliente: 'Junta de Vecinos', contacto: '977889900', fecha: '04/10/2026', hora: '19:00', tipoMasa: 'Frita', medidaMasa: 'Grande', cantidad: 450, estadoPago: 'Por pagar', total: 99000),
-
-    Order(cliente: 'El rey de la empanada', contacto: '911223344', fecha: '05/10/2026', hora: '15:00', tipoMasa: 'Horno', medidaMasa: 'Grande', cantidad: 1500, estadoPago: 'Por pagar', total: 330000),
-    Order(cliente: 'Costino', contacto: '965478123', fecha: '05/10/2026', hora: '16:00', tipoMasa: 'Horno', medidaMasa: 'Mediana', cantidad: 500, estadoPago: 'Por pagar', total: 105000),
-    Order(cliente: 'Pastorino', contacto: '998877665', fecha: '05/10/2026', hora: '17:00', tipoMasa: 'Horno', medidaMasa: 'Grande', cantidad: 600, estadoPago: 'Por pagar', total: 132000),
-    Order(cliente: 'Carol Pino', contacto: '923456789', fecha: '05/10/2026', hora: '19:00', tipoMasa: 'Frita', medidaMasa: 'Grande', cantidad: 1200, estadoPago: 'Por pagar', total: 264000),
-    Order(cliente: 'Yeri Mua', contacto: '933445566', fecha: '05/10/2026', hora: '10:00', tipoMasa: 'Horno', medidaMasa: 'Coctel', cantidad: 1800, estadoPago: 'Pagado', total: 342000),
-    Order(cliente: 'Arthur Morgan', contacto: '911998877', fecha: '05/10/2026', hora: '13:00', tipoMasa: 'Frita', medidaMasa: 'Mediana', cantidad: 750, estadoPago: 'Por pagar', total: 150000),
-  ];
-
+  List<Order> _pedidos = [];
   List<String> _fechasDisponibles = [];
   Set<String> _fechasConPedidosSet = {};
   int _indiceFechaSeleccionada = 0;
+  bool _cargando = true;
+  String? _errorCarga;
 
   @override
   void initState() {
     super.initState();
-    _fechasConPedidosSet = pedidos.map((p) => p.fecha).toSet();
-    _fechasDisponibles = _fechasConPedidosSet.toList()
-      ..sort((a, b) => _parseFecha(a).compareTo(_parseFecha(b)));
+    _cargarPedidos();
+  }
+
+  /// Convierte cualquier fecha (ej. 2026-10-29) al formato chileno dd/mm/aaaa
+  String _normalizarFecha(String raw) {
+    final limpia = raw.trim();
+    if (limpia.contains('-')) {
+      final partes = limpia.split('-');
+      if (partes.length == 3 && partes[0].length == 4) {
+        final dia = partes[2].padLeft(2, '0');
+        final mes = partes[1].padLeft(2, '0');
+        final anio = partes[0];
+        return '$dia/$mes/$anio';
+      }
+    }
+    return limpia;
   }
 
   DateTime _parseFecha(String fechaStr) {
-    final partes = fechaStr.split('/');
-    return DateTime(
-      int.parse(partes[2]),
-      int.parse(partes[1]),
-      int.parse(partes[0]),
-    );
+    final normalizada = _normalizarFecha(fechaStr);
+    final partes = normalizada.split('/');
+    if (partes.length == 3) {
+      return DateTime(
+        int.tryParse(partes[2]) ?? 2000,
+        int.tryParse(partes[1]) ?? 1,
+        int.tryParse(partes[0]) ?? 1,
+      );
+    }
+    return DateTime(2000);
   }
 
   String _formatFecha(DateTime fecha) {
@@ -61,8 +59,54 @@ class _OrderListScreenState extends State<OrderListScreen> {
     return '$dia/$mes/$anio';
   }
 
+  Future<void> _cargarPedidos() async {
+    setState(() {
+      _cargando = true;
+      _errorCarga = null;
+    });
+
+    try {
+      final String? fechaPrevia = _fechasDisponibles.isNotEmpty
+          ? _fechasDisponibles[_indiceFechaSeleccionada]
+          : null;
+
+      final lista = await DatabaseHelper.instance.getPedidos();
+
+      if (!mounted) return;
+
+      final fechasSet = lista.map((p) => _normalizarFecha(p.fecha)).toSet();
+      final fechasOrdenadas = fechasSet.toList()
+        ..sort((a, b) => _parseFecha(a).compareTo(_parseFecha(b)));
+
+      int nuevoIndice = 0;
+      if (fechasOrdenadas.isNotEmpty) {
+        if (fechaPrevia != null && fechasOrdenadas.contains(fechaPrevia)) {
+          nuevoIndice = fechasOrdenadas.indexOf(fechaPrevia);
+        } else if (_indiceFechaSeleccionada < fechasOrdenadas.length) {
+          nuevoIndice = _indiceFechaSeleccionada;
+        }
+      }
+
+      setState(() {
+        _pedidos = lista;
+        _fechasConPedidosSet = fechasSet;
+        _fechasDisponibles = fechasOrdenadas;
+        _indiceFechaSeleccionada = nuevoIndice;
+        _cargando = false;
+      });
+    } catch (e, stack) {
+      debugPrint('Error cargando pedidos desde SQLite: $e\n$stack');
+      if (!mounted) return;
+      setState(() {
+        _errorCarga = e.toString();
+        _cargando = false;
+      });
+    }
+  }
+
   Future<void> _abrirCalendarioFiltrado(Color colorPrimario) async {
-    final DateTime fechaInicial = _parseFecha(_fechasDisponibles[_indiceFechaSeleccionada]);
+    final String fechaActualStr = _fechasDisponibles[_indiceFechaSeleccionada];
+    final DateTime fechaInicial = _parseFecha(fechaActualStr);
     final DateTime primeraFecha = _parseFecha(_fechasDisponibles.first);
     final DateTime ultimaFecha = _parseFecha(_fechasDisponibles.last);
 
@@ -128,7 +172,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       },
                       onDateChanged: (fechaElegida) {
                         final String fechaFormateada = _formatFecha(fechaElegida);
-                        final int nuevoIndice = _fechasDisponibles.indexOf(fechaFormateada);
+                        final int nuevoIndice =
+                            _fechasDisponibles.indexOf(fechaFormateada);
                         if (nuevoIndice != -1) {
                           setState(() => _indiceFechaSeleccionada = nuevoIndice);
                         }
@@ -145,7 +190,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
     );
   }
 
-  void _mostrarResumenDelDia(List<Order> pedidosDelDia, Color colorPrimario) {
+void _mostrarResumenDelDia(List<Order> pedidosDelDia, Color colorPrimario) {
     int hornoCoctel = 0, hornoMediana = 0, hornoGrande = 0;
     int fritaCoctel = 0, fritaMediana = 0, fritaGrande = 0;
 
@@ -161,12 +206,35 @@ class _OrderListScreenState extends State<OrderListScreen> {
       }
     }
 
+    final int totalHorno = hornoCoctel + hornoMediana + hornoGrande;
+    final int totalFrita = fritaCoctel + fritaMediana + fritaGrande;
+    final int totalMasas = totalHorno + totalFrita;
+
+    const TextStyle estiloTitulo = TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+    );
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'Total Pedidos: ${pedidosDelDia.length}',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Total Pedidos: ${pedidosDelDia.length}',
+              style: estiloTitulo,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Total masas: $totalMasas',
+              style: estiloTitulo,
+            ),
+            const Divider(height: 20, thickness: 1),
+          ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -183,7 +251,15 @@ class _OrderListScreenState extends State<OrderListScreen> {
             Text('    Cóctel: $hornoCoctel unidades'),
             Text('    Mediana: $hornoMediana unidades'),
             Text('    Grande: $hornoGrande unidades'),
-            const Divider(height: 24),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Total: $totalHorno',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const Divider(height: 20),
             Text(
               'FRITA',
               style: TextStyle(
@@ -195,6 +271,14 @@ class _OrderListScreenState extends State<OrderListScreen> {
             Text('    Cóctel: $fritaCoctel unidades'),
             Text('    Mediana: $fritaMediana unidades'),
             Text('    Grande: $fritaGrande unidades'),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Total: $totalFrita',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         actions: [
@@ -215,7 +299,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
   Widget _buildSelectorFechaBar(String fechaActual, Color moradoPrincipal) {
     final bool hayAnterior = _indiceFechaSeleccionada > 0;
-    final bool haySiguiente = _indiceFechaSeleccionada < _fechasDisponibles.length - 1;
+    final bool haySiguiente =
+        _indiceFechaSeleccionada < _fechasDisponibles.length - 1;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
@@ -320,13 +405,19 @@ class _OrderListScreenState extends State<OrderListScreen> {
           '${pedido.cantidad} masas de ${pedido.tipoMasa} - \$${pedido.total}',
         ),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          final pedidoNormalizado =
+              pedido.copyWith(fecha: _normalizarFecha(pedido.fecha));
+          final bool? huboCambios = await Navigator.push<bool>(
             context,
             MaterialPageRoute(
-              builder: (context) => OrderDetailScreen(pedido: pedido),
+              builder: (context) =>
+                  OrderDetailScreen(pedido: pedidoNormalizado),
             ),
           );
+          if (huboCambios == true) {
+            _cargarPedidos();
+          }
         },
       ),
     );
@@ -338,6 +429,54 @@ class _OrderListScreenState extends State<OrderListScreen> {
     final moradoPrincipal =
         theme.appBarTheme.backgroundColor ?? theme.colorScheme.primary;
 
+    if (_cargando) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Historial de Pedidos',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        body: Center(
+          child: CircularProgressIndicator(color: moradoPrincipal),
+        ),
+      );
+    }
+
+    if (_errorCarga != null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Historial de Pedidos',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                const SizedBox(height: 12),
+                Text(
+                  'Error al leer la base de datos:\n$_errorCarga',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red, fontSize: 15),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _cargarPedidos,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     if (_fechasDisponibles.isEmpty) {
       return Scaffold(
         appBar: AppBar(
@@ -346,13 +485,25 @@ class _OrderListScreenState extends State<OrderListScreen> {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
-        body: const Center(child: Text('No hay pedidos registrados.')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.receipt_long, size: 56, color: Colors.grey.shade400),
+              const SizedBox(height: 12),
+              Text(
+                'No hay pedidos registrados.',
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
     final String fechaActual = _fechasDisponibles[_indiceFechaSeleccionada];
-    final List<Order> pedidosDelDia = pedidos
-        .where((p) => p.fecha == fechaActual)
+    final List<Order> pedidosDelDia = _pedidos
+        .where((p) => _normalizarFecha(p.fecha) == fechaActual)
         .toList()
       ..sort((a, b) => a.hora.compareTo(b.hora));
 
@@ -382,7 +533,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () => _mostrarResumenDelDia(pedidosDelDia, moradoPrincipal),
+                  onPressed: () =>
+                      _mostrarResumenDelDia(pedidosDelDia, moradoPrincipal),
                   icon: const Icon(Icons.analytics),
                   label: const Text(
                     'Ver Total Pedidos del Día',

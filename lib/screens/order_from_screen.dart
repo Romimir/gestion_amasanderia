@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../database/database_helper.dart';
+import '../models/order_model.dart';
 
 class OrderFormScreen extends StatefulWidget {
   const OrderFormScreen({super.key});
@@ -24,6 +26,9 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
   String _tipoMasa = 'Horno';
   String _medidaMasa = 'Coctel';
   String _estadoPago = 'Por pagar';
+  bool _guardando = false;
+
+  OverlayEntry? _notificacionActual;
 
   @override
   void initState() {
@@ -34,6 +39,9 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
 
   @override
   void dispose() {
+    if (_notificacionActual?.mounted ?? false) {
+      _notificacionActual!.remove();
+    }
     _clienteController.dispose();
     _contactoController.dispose();
     _cantidadController.dispose();
@@ -67,66 +75,64 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
     _cantidadController.text = anterior.toString();
   }
 
-OverlayEntry? _notificacionActual;
+  void _mostrarNotificacionSuperior(
+    String mensaje, {
+    IconData icono = Icons.info_outline,
+  }) {
+    if (!mounted) return;
 
-void _mostrarNotificacionSuperior(
-  String mensaje, {
-  IconData icono = Icons.info_outline,
-}) {
-  if (!mounted) return;
+    if (_notificacionActual?.mounted ?? false) {
+      _notificacionActual!.remove();
+    }
+    _notificacionActual = null;
 
-  if (_notificacionActual?.mounted ?? false) {
-    _notificacionActual!.remove();
-  }
-  _notificacionActual = null;
+    final mediaQuery = MediaQuery.of(context);
+    final double espacioSuperior = mediaQuery.padding.top + kToolbarHeight;
 
-  final mediaQuery = MediaQuery.of(context);
-  final double espacioSuperior = mediaQuery.padding.top + kToolbarHeight;
-
-  late final OverlayEntry entry;
-  entry = OverlayEntry(
-    builder: (context) => Positioned(
-      top: espacioSuperior + 12,
-      left: 16,
-      right: 16,
-      child: Material(
-        color: Colors.black,
-        elevation: 6,
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Icon(icono, color: Colors.white, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  mensaje,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: espacioSuperior + 12,
+        left: 16,
+        right: 16,
+        child: Material(
+          color: Colors.black,
+          elevation: 6,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Icon(icono, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    mensaje,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
 
-  _notificacionActual = entry;
-  Overlay.of(context).insert(entry);
+    _notificacionActual = entry;
+    Overlay.of(context).insert(entry);
 
-  Future.delayed(const Duration(seconds: 3), () {
-    if (entry.mounted) {
-      entry.remove();
-    }
-    if (_notificacionActual == entry) {
-      _notificacionActual = null;
-    }
-  });
-}
+    Future.delayed(const Duration(seconds: 3), () {
+      if (entry.mounted) {
+        entry.remove();
+      }
+      if (_notificacionActual == entry) {
+        _notificacionActual = null;
+      }
+    });
+  }
 
   Future<void> _seleccionarFecha(BuildContext context, Color colorPrimario) async {
     final DateTime hoy = DateTime.now();
@@ -141,65 +147,68 @@ void _mostrarNotificacionSuperior(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: colorPrimario,
-                onPrimary: Colors.white,
-                onSurface: Colors.black87,
+          child: SizedBox(
+            width: 328,
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: ColorScheme.light(
+                  primary: colorPrimario,
+                  onPrimary: Colors.white,
+                  onSurface: Colors.black87,
+                ),
               ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
-                  decoration: BoxDecoration(
-                    color: colorPrimario,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
+                    decoration: BoxDecoration(
+                      color: colorPrimario,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Seleccionar fecha de retiro',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Seleccionar fecha de retiro',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        tooltip: 'Cerrar',
-                        onPressed: () => Navigator.pop(dialogContext),
-                      ),
-                    ],
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          tooltip: 'Cerrar',
+                          onPressed: () => Navigator.pop(dialogContext),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                SizedBox(
-                  height: 305,
-                  child: CalendarDatePicker(
-                    initialDate: fechaInicial,
-                    firstDate: DateTime(hoy.year, hoy.month, hoy.day),
-                    lastDate: DateTime(hoy.year + 1),
-                    onDateChanged: (fechaElegida) {
-                      final String dia = fechaElegida.day.toString().padLeft(2, '0');
-                      final String mes = fechaElegida.month.toString().padLeft(2, '0');
-                      final String anio = fechaElegida.year.toString();
+                  SizedBox(
+                    height: 305,
+                    child: CalendarDatePicker(
+                      initialDate: fechaInicial,
+                      firstDate: DateTime(hoy.year, hoy.month, hoy.day),
+                      lastDate: DateTime(hoy.year + 1),
+                      onDateChanged: (fechaElegida) {
+                        final String dia = fechaElegida.day.toString().padLeft(2, '0');
+                        final String mes = fechaElegida.month.toString().padLeft(2, '0');
+                        final String anio = fechaElegida.year.toString();
 
-                      setState(() {
-                        _fechaSeleccionada = fechaElegida;
-                        _fechaController.text = '$dia/$mes/$anio';
-                      });
-                      Navigator.pop(dialogContext);
-                    },
+                        setState(() {
+                          _fechaSeleccionada = fechaElegida;
+                          _fechaController.text = '$dia/$mes/$anio';
+                        });
+                        Navigator.pop(dialogContext);
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -254,7 +263,9 @@ void _mostrarNotificacionSuperior(
     }
   }
 
-  void _guardarPedido(int cantidad) {
+  Future<void> _guardarPedido(int cantidad, int totalMasas) async {
+    if (_guardando) return;
+
     final bool formularioValido = _formKey.currentState!.validate();
     final List<String> faltantes = [];
 
@@ -283,11 +294,38 @@ void _mostrarNotificacionSuperior(
       return;
     }
 
-    _mostrarNotificacionSuperior(
-      'Pedido registrado con éxito',
-      icono: Icons.check_circle_outline,
-    );
-    Navigator.pop(context);
+    setState(() => _guardando = true);
+
+    try {
+      final String telefonoDigitos = _contactoController.text.trim();
+      final Order nuevoPedido = Order(
+        cliente: _clienteController.text.trim(),
+        contacto: telefonoDigitos.isNotEmpty ? '9$telefonoDigitos' : '',
+        fecha: _fechaController.text,
+        hora: _horaController.text,
+        tipoMasa: _tipoMasa,
+        medidaMasa: _medidaMasa,
+        cantidad: cantidad,
+        estadoPago: _estadoPago,
+        total: totalMasas,
+      );
+
+      await DatabaseHelper.instance.insertPedido(nuevoPedido);
+
+      if (!mounted) return;
+      _mostrarNotificacionSuperior(
+        'Pedido registrado con éxito',
+        icono: Icons.check_circle_outline,
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _guardando = false);
+      _mostrarNotificacionSuperior(
+        'Ocurrió un error al guardar el pedido.',
+        icono: Icons.error_outline,
+      );
+    }
   }
 
   Widget _buildSectionTitle(String title) {
@@ -695,11 +733,13 @@ void _mostrarNotificacionSuperior(
 
               // --- BOTÓN GUARDAR ---
               ElevatedButton.icon(
-                onPressed: () => _guardarPedido(cantidad),
+                onPressed: _guardando
+                    ? null
+                    : () => _guardarPedido(cantidad, totalMasas),
                 icon: const Icon(Icons.save),
-                label: const Text(
-                  'Guardar Pedido',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                label: Text(
+                  _guardando ? 'Guardando...' : 'Guardar Pedido',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),

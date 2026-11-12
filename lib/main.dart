@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'screens/dashboard_screen.dart';
 import 'themes/app_theme.dart';
+
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -14,7 +16,7 @@ class MyApp extends StatelessWidget {
       title: 'Amasandería La Lela',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const DashboardScreen(), 
+      home: const DashboardScreen(),
     );
   }
 }
