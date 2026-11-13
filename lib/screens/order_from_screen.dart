@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../database/database_helper.dart';
+import 'package:provider/provider.dart';
 import '../models/order_model.dart';
+import '../viewmodel/order_viewmodel.dart';
 
 class OrderFormScreen extends StatefulWidget {
   final Order? pedidoEditar;
@@ -347,7 +348,7 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
 
     if (!formularioValido || faltantes.isNotEmpty) {
       final String mensaje = faltantes.isNotEmpty
-          ? 'No se puede guardar el pedido. Faltan datos: ${faltantes.join(', ')}.'
+          ? 'No se puede guardar el pedido. Faltan datos: ${faltantes.join(' - ')}.'
           : 'No se puede guardar el pedido. El teléfono debe tener 8 dígitos.';
 
       _mostrarNotificacionSuperior(
@@ -364,6 +365,8 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
       final String contactoCompleto =
           telefonoDigitos.isNotEmpty ? '9$telefonoDigitos' : '';
 
+      final viewModel = context.read<OrderViewModel>();
+
       if (_esEdicion) {
         final Order pedidoActualizado = widget.pedidoEditar!.copyWith(
           cliente: _clienteController.text.trim(),
@@ -378,7 +381,7 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
           total: totalMasas,
         );
 
-        await DatabaseHelper.instance.updatePedido(pedidoActualizado);
+        await viewModel.actualizarPedido(pedidoActualizado);
 
         if (!mounted) return;
         _mostrarNotificacionSuperior(
@@ -400,7 +403,7 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
           total: totalMasas,
         );
 
-        await DatabaseHelper.instance.insertPedido(nuevoPedido);
+        await viewModel.agregarPedido(nuevoPedido);
 
         if (!mounted) return;
         _mostrarNotificacionSuperior(
@@ -515,7 +518,6 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              // --- DATOS DEL CLIENTE ---
               _buildSectionTitle('DATOS DEL CLIENTE'),
               Card(
                 child: Padding(
@@ -590,7 +592,6 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // --- FECHA Y HORA DE RETIRO ---
               _buildSectionTitle('FECHA Y HORA DE RETIRO'),
               Card(
                 child: Padding(
@@ -639,7 +640,6 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // --- DETALLES DEL PRODUCTO ---
               _buildSectionTitle('DETALLES DEL PRODUCTO'),
               Card(
                 child: Padding(
@@ -751,7 +751,6 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // --- ESTADO DE PAGO ---
               _buildSectionTitle('ESTADO DE PAGO'),
               Card(
                 child: Padding(
@@ -780,7 +779,6 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
               ),
               const SizedBox(height: 24),
 
-              // --- RESUMEN / DETALLES DEL PEDIDO ---
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -824,7 +822,6 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
               ),
               const SizedBox(height: 24),
 
-              // --- BOTÓN GUARDAR ---
               ElevatedButton.icon(
                 onPressed: _guardando
                     ? null

@@ -1,0 +1,48 @@
+{
+  "cumplimiento_hu": [
+    {
+      "id": "HU-01",
+      "titulo": "¿Qué tan fácil fue completar el agendamiento y edición de pedidos?",
+      "valor": 5,
+      "min": "1: Muy difícil",
+      "max": "5: Muy fácil e intuitivo"
+    },
+    {
+      "id": "HU-02",
+      "titulo": "¿El sistema de persistencia local (SQLite) guardó correctamente los datos al reiniciar?",
+      "valor": 5,
+      "min": "1: Se perdieron datos",
+      "max": "5: Persistió todo perfecto"
+    },
+    {
+      "id": "HU-03",
+      "titulo": "¿Funcionó correctamente el control de estados de entrega y fechas?",
+      "valor": 5,
+      "min": "1: Falló el flujo",
+      "max": "5: Operó de forma fluida"
+    }
+  ],
+  "usabilidad": [
+    {
+      "id": "UX-01",
+      "titulo": "¿Cómo calificas la navegación y claridad visual de la interfaz?",
+      "valor": 5,
+      "min": "1: Confusa",
+      "max": "5: Clara y atractiva"
+    },
+    {
+      "id": "UX-02",
+      "titulo": "¿El calendario con indicadores visuales facilitó la búsqueda de fechas?",
+      "valor": 5,
+      "min": "1: No ayudó",
+      "max": "5: Demasiado útil"
+    },
+    {
+      "id": "VAL-01",
+      "titulo": "¿Qué tan probable es que recomiendes esta aplicación para uso real en la amasandería?",
+      "valor": 5,
+      "min": "1: Nada probable",
+      "max": "5: Definitivamente"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-package com.example.gestion_amasanderia
+package com.gestion_amasanderia
 
 import io.flutter.embedding.android.FlutterActivity
 

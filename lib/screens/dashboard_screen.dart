@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gestion_amasanderia/screens/order_from_screen.dart';
 import 'package:gestion_amasanderia/screens/order_list_screen.dart';
+import 'package:gestion_amasanderia/screens/qa_feedback_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -65,6 +66,28 @@ class DashboardScreen extends StatelessWidget {
                 Navigator.pop(context);
               },
             ),
+            ListTile(
+              leading: Icon(
+                Icons.fact_check_outlined,
+                color: moradoPrincipal,
+              ),
+              title: const Text(
+                'Evaluar App (QA)',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const QaFeedbackScreen(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -74,14 +97,12 @@ class DashboardScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo de la amasandería
               Image.asset(
                 'lib/assets/icons/logo.png',
                 height: 180,
                 fit: BoxFit.contain,
               ),
               const SizedBox(height: 24),
-
               Text(
                 '¡Bienvenido!',
                 style: TextStyle(
@@ -92,7 +113,7 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Amasandería en marcha', // Despues implementar turnos de trabajo y usuario para que se tenga registrado quien atendio y agendo pedidos
+                'Amasandería en marcha',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -100,8 +121,6 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // Botón para agendar pedido
               SizedBox(
                 width: double.infinity,
                 height: 55,
@@ -122,8 +141,6 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Botón para ver los pedidos
               SizedBox(
                 width: double.infinity,
                 height: 55,
@@ -132,7 +149,7 @@ class DashboardScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => OrderListScreen(),
+                        builder: (context) => const OrderListScreen(),
                       ),
                     );
                   },

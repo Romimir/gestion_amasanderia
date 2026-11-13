@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../database/database_helper.dart';
+import 'package:provider/provider.dart';
 import '../models/order_model.dart';
+import '../viewmodel/order_viewmodel.dart';
 import 'order_from_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
@@ -27,7 +28,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     super.initState();
     _pedido = widget.pedido;
     _estadoEntregaSeleccionado = _pedido.estadoEntrega;
-    _verificarVencimientoAutomatico();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _verificarVencimientoAutomatico();
+    });
   }
 
   @override
@@ -41,6 +44,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Future<void> _verificarVencimientoAutomatico() async {
     if (_pedido.estadoEntrega != 'Por retirar' || _pedido.id == null) return;
 
+    final viewModel = context.read<OrderViewModel>();
     final partesFecha = _pedido.fecha.trim().split('/');
     if (partesFecha.length != 3) return;
 
@@ -58,8 +62,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final fechaRetiro = DateTime(anio, mes, dia, hora, minuto);
 
     if (DateTime.now().isAfter(fechaRetiro.add(const Duration(days: 2)))) {
-      await DatabaseHelper.instance
-          .updateEstadoEntrega(_pedido.id!, 'No retirado');
+      await viewModel.actualizarEstado(_pedido.id!, 'No retirado');
+      
       if (!mounted) return;
       setState(() {
         _pedido = _pedido.copyWith(estadoEntrega: 'No retirado');
@@ -238,11 +242,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       return;
     }
 
+    final viewModel = context.read<OrderViewModel>();
     setState(() => _procesando = true);
 
     try {
-      await DatabaseHelper.instance
-          .updateEstadoEntrega(_pedido.id!, _estadoEntregaSeleccionado);
+      await viewModel.actualizarEstado(_pedido.id!, _estadoEntregaSeleccionado);
+      
       if (!mounted) return;
       setState(() {
         _pedido = _pedido.copyWith(estadoEntrega: _estadoEntregaSeleccionado);
@@ -265,6 +270,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Future<void> _confirmarYEliminar(Color colorPrimario) async {
     if (_procesando || _pedido.id == null) return;
+
+    final viewModel = context.read<OrderViewModel>();
 
     final bool? confirmar = await showDialog<bool>(
       context: context,
@@ -303,7 +310,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     setState(() => _procesando = true);
 
     try {
-      await DatabaseHelper.instance.deletePedido(_pedido.id!);
+      await viewModel.eliminarPedido(_pedido.id!);
+      
       if (!mounted) return;
       Navigator.pop(context, true);
     } catch (_) {
@@ -468,7 +476,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           padding: const EdgeInsets.all(20),
           child: ListView(
             children: [
-              // --- ENCABEZADO ORGÁNICO DEL CLIENTE ---
               Card(
                 margin: EdgeInsets.zero,
                 child: Padding(
@@ -509,8 +516,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // --- FECHA Y HORA EN DOS COLUMNAS AMPLIAS ---
               Row(
                 children: [
                   Expanded(
@@ -531,8 +536,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ],
               ),
               const SizedBox(height: 14),
-
-              // --- DETALLE DE MASAS EN TRES COLUMNAS ---
               Row(
                 children: [
                   Expanded(
@@ -552,8 +555,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ],
               ),
               const SizedBox(height: 22),
-
-              // --- TOTAL SOBRE ESTADO DEL PAGO ---
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 10),
                 child: Text(
@@ -565,8 +566,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ),
                 ),
               ),
-
-              // --- ESTADO DEL PAGO (SOLO VISUAL) ---
               const Padding(
                 padding: EdgeInsets.only(left: 4, bottom: 8),
                 child: Text(
@@ -586,8 +585,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-
-              // --- ESTADO DE ENTREGA (ÍCONO + TEXTO + BOTÓN GUARDAR) ---
               const Padding(
                 padding: EdgeInsets.only(left: 4, bottom: 8),
                 child: Text(
@@ -645,8 +642,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // --- BOTÓN ELIMINAR ---
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(

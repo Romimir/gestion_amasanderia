@@ -1,55 +1,76 @@
-# Gestión de Pedidos - Amasandería
+# Gestión de Pedidos - Amasandería (Prototipo Funcional - PDS2)
+
+Aplicación móvil desarrollada en Flutter orientada a digitalizar y optimizar la administración de pedidos en una amasandería local, garantizando la persistencia local de datos y una arquitectura desacoplada bajo el estándar MVVM.
+
+---
 
 ## 1. Definición del Producto y Paradigma
-En una amasandería, parte de su trabajo diario es administrar los pedidos anotándolos en papeles para pegarlos sobre la caja o registrarlos en una libreta. Esto genera un desorden operativo, facilitando errores al calcular manualmente los precios según el tipo de masa (frita o de horno) y su tamaño (cóctel, mediana o grande). Además, existe la posibilidad de olvidar algún pedido al pasarlo por alto, sumado al tedioso trabajo de contar a mano el total de masas que se deben preparar en la zona de panadería.
+En el funcionamiento cotidiano de una amasandería, la administración tradicional se basa en anotar pedidos en papel y adherirlos a la caja o registrarlos en libretas físicas. Este flujo operativo genera un alto margen de error al calcular manualmente los precios según el tipo de masa (frita o de horno) y su tamaño (cóctel, mediana o grande), además del riesgo de pasar por alto encargos y la alta fricción al contabilizar manualmente la producción diaria para el área de panadería.
 
-Para solucionar esto, se creó un prototipo funcional de una aplicación móvil que digitaliza el ingreso de pedidos. El sistema automatiza el cálculo de cobros mediante los precios ya definidos del negocio y genera un resumen diario para informar cuánto se requiere producir, optimizando los tiempos del local y evitando atrasos.
+Para dar solución a esta problemática, se desarrolló un prototipo funcional móvil que centraliza y automatiza el registro, cálculo de cobros y control de entregas. La elección del paradigma móvil responde a las exigencias dinámicas del entorno: un sistema de escritorio anclaría la gestión a un espacio físico rígido, mientras que un dispositivo móvil permite operar desde la caja o consultar los requerimientos de producción directamente en el área de panadería. Asimismo, el factor de forma compacto evita las limitaciones de un computador tradicional en zonas con alta concentración de polvo en suspensión por harina. Se seleccionó **Flutter** debido a su capacidad para renderizar interfaces reactivas mediante widgets modulares y asegurar un rendimiento fluido en listas y calendarios dinámicos.
 
-El entorno de una amasandería es dinámico y de movimiento constante; un sistema de escritorio anclaría la administración a un solo lugar. El paradigma móvil es la tecnología adecuada porque permite tomar los pedidos desde la caja o revisar la producción necesaria directamente desde el sector de panadería con un celular o tablet. Además, los dispositivos móviles son más compactos; en la zona de producción, un PC de escritorio quedaría inutilizable rápidamente por la gran cantidad de polvo en el aire producto de la harina. Finalmente, se eligió Flutter ya que su arquitectura basada en widgets facilita la creación de interfaces reactivas y modulares, garantizando un rendimiento fluido al manejar listas dinámicas.
+---
 
 ## 2. Especificación de Requerimientos
 
-### Historias de Usuario
-* **HU1:** Como administrador de caja, quiero ingresar el tipo, tamaño y cantidad de masas en un formulario, para que la aplicación calcule el total a cobrar automáticamente sin errores.
-* **HU2:** Como trabajador de panadería, quiero ver un resumen con el total de masas fritas y de horno agrupadas por tamaño para el día seleccionado, para planificar la producción y evitar atrasos.
-* **HU3:** Como encargado del local, quiero tocar un pedido específico en el historial de ventas, para ver los detalles del cliente (como su contacto y estado de pago) y asegurar una entrega correcta.
+### Historias de Usuario (HU)
+- **HU1:** Como administrador de caja, quiero ingresar los datos del cliente, tipo, tamaño y cantidad de masas en un formulario interactivo, para que la aplicación calcule el total a cobrar de manera automática y sin errores de cálculo.
+- **HU2:** Como trabajador de panadería, quiero visualizar un resumen diario agrupado por características físicas y totales de masas fritas y de horno, para planificar la producción y evitar retrasos operativos.
+- **HU3:** Como encargado del local, quiero seleccionar un pedido específico desde el historial para consultar los detalles de contacto, cambiar los estados de entrega y asegurar una trazabilidad correcta.
 
 ### Matriz de Requerimientos
 **Requerimientos Funcionales (RF):**
-* **RF1:** El sistema debe contar con un formulario que registre los datos del cliente, contacto, fecha, hora, tipo de masa, medida y cantidad.
-* **RF2:** El sistema debe calcular de manera automática el precio final del pedido basándose en las variables de tamaño y tipo de masa seleccionadas.
-* **RF3:** El sistema debe mostrar un historial de pedidos permitiendo filtrar la vista por fechas específicas.
-* **RF4:** El sistema debe calcular y mostrar la sumatoria total de unidades solicitadas en el día, agrupadas por sus características físicas.
+- **RF1:** El sistema cuenta con un formulario robusto para el registro de nombre, contacto, fecha, hora, tipo de masa, medida y cantidad de unidades.
+- **RF2:** El sistema calcula de forma dinámica el precio final del pedido a partir de las reglas de negocio de tamaño y tipología de masas.
+- **RF3:** El sistema incorpora una vista de historial basada en calendarios interactivos con indicadores visuales de fechas activas y filtrado por día.
+- **RF4:** El sistema procesa y despliega un resumen diario con la sumatoria desglosada por categoría de producción (Horno / Frita).
+- **RF5:** El sistema integra un módulo de valoración In-App (Beta Testing) que lee un archivo JSON estático y emite reportes mediante interoperabilidad nativa (`share_plus`).
 
 **Requerimientos No Funcionales (RNF):**
-* **RNF1:** La aplicación debe ser desarrollada utilizando el framework Flutter y el lenguaje Dart.
-* **RNF2:** La navegación de lectura de datos debe implementar obligatoriamente el patrón de interfaz Master-Detail.
-* **RNF3:** La estructura del código debe ser modular, separando los modelos de datos, las vistas (screens) y el diseño visual (theme).
-* **RNF4:** La interfaz visual debe mantener coherencia utilizando un tema global de colores (AppTheme).
+- **RNF1:** La solución se encuentra construida bajo el framework Flutter utilizando el lenguaje Dart.
+- **RNF2:** El diseño de navegación implementa de forma estricta componentes estructurados de lectura y flujos desacoplados.
+- **RNF3:** La arquitectura del software sigue un diseño modular bajo el patrón **MVVM**, aislando modelos, vistas, viewmodels y servicios de persistencia.
+- **RNF4:** La interfaz gráfica respeta una identidad visual global centralizada mediante un tema unificado (`AppTheme`).
 
-## 3. Arquitectura y Jerarquía de Navegación
+---
 
-**Justificación de la Arquitectura:**
-Para este proyecto se adoptó una arquitectura modular basada en el principio de Separación de Responsabilidades (Separation of Concerns). El código se estructuró en directorios específicos dentro de la carpeta `lib/` para mantener el proyecto escalable y ordenado, dejando el archivo `main.dart` casi en blanco, funcionando exclusivamente como punto de arranque. La división es la siguiente:
-*   **/models**: Contiene la definición y estructura pura de los datos (el modelo del pedido), aislando la lógica de información de la interfaz gráfica.
-*   **/screens**: Agrupa todas las vistas de la aplicación (`Dashboard`, `Formulario`, `Lista` y `Detalle`), encargándose únicamente de la interfaz de usuario y sus estados.
-*   **/theme**: Centraliza toda la configuración visual (paleta de colores morados, estilos de botones y textos) en un único archivo `app_theme.dart` para ser inyectado globalmente.
+## 3. Arquitectura y Estructura del Proyecto (MVVM)
 
-**Esquema Lógico de Navegación:**
-El flujo principal de la aplicación es directo e interconectado a través de `Navigator.push`. Las pantallas se comunican de la siguiente forma para resolver el flujo de la amasandería:
-1.  **DashboardScreen (Nodo Central):** Es la pantalla de inicio. Actúa como el menú principal bifurcando al usuario hacia la creación de un nuevo pedido o a la revisión del historial.
-2.  **OrderFormScreen:** Pantalla operativa para ingresar datos, a la cual se ingresa directamente desde el botón principal del Dashboard.
-3.  **OrderListScreen (Vista Master):** Accesible desde el Dashboard. Muestra la lista de pedidos filtrable por día.
-4.  **OrderDetailScreen (Vista Detail):** Es el destino final del flujo de lectura. Solo se accede al tocar una tarjeta específica dentro de la `OrderListScreen`. La navegación hacia esta pantalla inyecta el objeto del pedido completo por parámetro, evitando procesar datos nuevamente.
+El proyecto implementa estrictamente el patrón **MVVM (Model-View-ViewModel)** en conjunto con el gestor de estado `Provider`, desacoplando por completo la lógica de negocio y las consultas de base de datos de las interfaces visuales:
 
-## 4. Despliegue y Material de Apoyo
+- **`/lib/models`**: Contiene la clase de dominio `Order` encargada de modelar la estructura de los pedidos y su serialización bidireccional (`toMap` / `fromMap`) para SQLite.
+- **`/lib/viewmodels`**: Aloja el `OrderViewModel` (extendiendo de `ChangeNotifier`), responsable de centralizar la lógica asíncrona de carga, inserción, actualización de estados de entrega y eliminación, notificando reactivamente a las vistas.
+- **`/lib/services`**: Concentra la capa de persistencia local mediante `DatabaseHelper` (SQLite, `version: 2`), incorporando control de esquemas y reglas de negocio automatizadas (como el marcado de pedidos no retirados por antigüedad).
+- **`/lib/screens`**: Agrupa las vistas declarativas limpias de lógica directa (`Dashboard`, `OrderForm`, `OrderList`, `OrderDetail` y `QaFeedback`).
+- **`/lib/themes`**: Centraliza los estilos globales y la paleta de colores corporativa en `app_theme.dart`.
 
-**Instrucciones de compilación y ejecución:**
-Para desplegar este proyecto en un entorno local, se requiere tener instalado el SDK de Flutter y contar con un emulador Android/iOS o un dispositivo físico conectado. Ejecute los siguientes comandos en la terminal desde la carpeta raíz del proyecto:
+---
 
-1. Descargar e instalar las dependencias necesarias utilizando el siguiente comando en la consola:
-   flutter pub get
-2. Compilar y ejecutar la applicacion:
-   flutter run
-**Material de apoyo**
-Video de exposicion técnica: https://drive.google.com/file/d/1Raqbi6RXQGuqcQemww9bj7WoCKzzooPq/view?usp=drivesdk
+## 4. Estrategia de Calidad y Beta Testing (QA)
+
+Con el fin de validar el prototipo en un entorno real, se implementó el módulo de evaluación dinámico exigido por la pauta, el cual procesa un instrumento estructurado en formato JSON (`assets/encuesta_qa.json`) con métricas orientadas a Historias de Usuario y Usabilidad[cite: 10, 20].
+
+* **Muestra de Validación (10 usuarios reales):**
+  * 4 x Participantes de la iniciativa "Workspace Mobile Firsts"[cite: 4].
+  * 3 x Conocedores de la industria gastronómica/tecnológica[cite: 4].
+  * 3 x Usuarios externos[cite: 4].
+* **Reporte Ejecutivo de Resultados:**
+  * **Qué funcionó:** La inmediatez de la persistencia local sin tiempos de carga notables, la utilidad del calendario con puntos indicadores de carga diaria y la simpleza del cambio de estados de entrega en terreno.
+  * **Qué falló / Dificultades:** Algunos evaluadores señalaron no les agrado del todo el color y declararon que la pantalla de Pedidos podria mejorar al tener como primera vista el calendario y luego los pedidos.
+  * **Deuda Técnica (Trabajos Futuros):** Implementar sincronización opcional en la nube y desarrollar la vista consolidada de cuentas pendientes para clientes que cancelan a fin de mes.
+
+---
+
+## 5. Despliegue y Material de Apoyo
+
+## Despliegue, Binarios y Material de Apoyo
+
+Los artefactos ejecutables y el material documental correspondiente al prototipo funcional **v1.0.0-beta (TRL 4)** se encuentran disponibles en los siguientes enlaces:
+
+* **Instalador Android (`.apk`):** [Descargar desde GitHub Releases (v1.0.0-beta)](https://github.com/romimir/gestion_amasanderia/releases)
+* **Presentación Ejecutiva (PDF) y Pitch:** https://drive.google.com/drive/folders/131WTJ2uHUqS8EbH0IqIggtWmvTq_pB-x?usp=sharing
+
+### Guía de instalación en Android
+1. Descarga el archivo `gestion-amasanderia-v1.0.0-beta.apk` desde la sección **Releases** de este repositorio.
+2. Habilita el permiso para instalar aplicaciones de fuentes desconocidas en el dispositivo Android si el sistema lo solicita.
+3. Ejecuta la aplicación instalada bajo el paquete `com.gestion_amasanderia` (**Amasandería La Lela**); el sistema opera de forma autónoma y sin conexión mediante persistencia local en SQLite.

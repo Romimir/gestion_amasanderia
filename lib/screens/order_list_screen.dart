@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../database/database_helper.dart';
+import 'package:provider/provider.dart';
 import '../models/order_model.dart';
+import '../viewmodel/order_viewmodel.dart';
 import 'order_detail_screen.dart';
 
 class OrderListScreen extends StatefulWidget {
@@ -12,30 +13,12 @@ class OrderListScreen extends StatefulWidget {
 
 class _OrderListScreenState extends State<OrderListScreen> {
   late DateTime _fechaSeleccionada;
-  List<Order> _todosLosPedidos = [];
-  bool _cargando = true;
 
   @override
   void initState() {
     super.initState();
     final ahora = DateTime.now();
     _fechaSeleccionada = DateTime(ahora.year, ahora.month, ahora.day);
-    _cargarPedidos();
-  }
-
-  Future<void> _cargarPedidos() async {
-    setState(() => _cargando = true);
-    try {
-      final pedidos = await DatabaseHelper.instance.getPedidos();
-      if (!mounted) return;
-      setState(() {
-        _todosLosPedidos = pedidos;
-        _cargando = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _cargando = false);
-    }
   }
 
   String _formatearFecha(DateTime fecha) {
@@ -92,9 +75,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
     });
   }
 
-  Future<void> _seleccionarFecha(Color colorPrimario) async {
+  Future<void> _seleccionarFecha(Color colorPrimario, List<Order> todosLosPedidos) async {
     final Set<DateTime> fechasConPedidos = {};
-    for (final pedido in _todosLosPedidos) {
+    for (final pedido in todosLosPedidos) {
       final fecha = _parseFecha(pedido.fecha);
       if (fecha != null) {
         fechasConPedidos.add(DateTime(fecha.year, fecha.month, fecha.day));
@@ -110,18 +93,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
     );
 
     const List<String> meses = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
     ];
     const List<String> diasSemana = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -148,7 +121,6 @@ class _OrderListScreenState extends State<OrderListScreen> {
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // --- CABECERA MORADA IDÉNTICA AL FORMULARIO ---
                     Container(
                       padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
                       decoration: BoxDecoration(
@@ -177,8 +149,6 @@ class _OrderListScreenState extends State<OrderListScreen> {
                         ],
                       ),
                     ),
-
-                    // --- NAVEGACIÓN DE MES Y AÑO ---
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                       child: Row(
@@ -221,8 +191,6 @@ class _OrderListScreenState extends State<OrderListScreen> {
                         ],
                       ),
                     ),
-
-                    // --- INICIALES DÍAS DE LA SEMANA ---
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Row(
@@ -244,8 +212,6 @@ class _OrderListScreenState extends State<OrderListScreen> {
                             .toList(),
                       ),
                     ),
-
-                    // --- CUADRÍCULA DE DÍAS ---
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
                       child: GridView.builder(
@@ -350,8 +316,6 @@ class _OrderListScreenState extends State<OrderListScreen> {
                         },
                       ),
                     ),
-
-                    // --- LEYENDA Y ACCESO RÁPIDO A HOY ---
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 4, 12, 10),
                       child: Row(
@@ -513,15 +477,14 @@ class _OrderListScreenState extends State<OrderListScreen> {
     );
   }
 
-Widget _buildPedidoCard(Order pedido, Color moradoPrincipal) {
+  Widget _buildPedidoCard(Order pedido, Color moradoPrincipal) {
     final bool estaPagado = pedido.estadoPago == 'Pagado';
     final bool mostrarEstadoEntrega = pedido.estadoEntrega != 'Por retirar';
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
           backgroundColor: moradoPrincipal,
           child: const Icon(Icons.receipt, color: Colors.white),
@@ -601,7 +564,9 @@ Widget _buildPedidoCard(Order pedido, Color moradoPrincipal) {
             ),
           );
           if (huboCambios == true) {
-            _cargarPedidos();
+            if (mounted) {
+              context.read<OrderViewModel>().cargarPedidos();
+            }
           }
         },
       ),
@@ -614,9 +579,13 @@ Widget _buildPedidoCard(Order pedido, Color moradoPrincipal) {
     final moradoPrincipal =
         theme.appBarTheme.backgroundColor ?? theme.colorScheme.primary;
 
+    final viewModel = context.watch<OrderViewModel>();
+    final todosLosPedidos = viewModel.pedidos;
+    final cargando = viewModel.isLoading;
+
     final String fechaActualStr = _formatearFecha(_fechaSeleccionada);
 
-    final List<Order> pedidosDelDia = _todosLosPedidos.where((pedido) {
+    final List<Order> pedidosDelDia = todosLosPedidos.where((pedido) {
       final fechaPedido = _parseFecha(pedido.fecha);
       if (fechaPedido != null) {
         return fechaPedido.year == _fechaSeleccionada.year &&
@@ -636,7 +605,6 @@ Widget _buildPedidoCard(Order pedido, Color moradoPrincipal) {
       ),
       body: Column(
         children: [
-          // --- BARRA SELECTORA DE FECHA ---
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
@@ -656,7 +624,7 @@ Widget _buildPedidoCard(Order pedido, Color moradoPrincipal) {
                   onPressed: () => _cambiarDia(-1),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => _seleccionarFecha(moradoPrincipal),
+                  onPressed: () => _seleccionarFecha(moradoPrincipal, todosLosPedidos),
                   icon: Icon(Icons.calendar_today,
                       size: 18, color: moradoPrincipal),
                   label: Text(
@@ -685,10 +653,8 @@ Widget _buildPedidoCard(Order pedido, Color moradoPrincipal) {
               ],
             ),
           ),
-
-          // --- LISTA DE PEDIDOS ---
           Expanded(
-            child: _cargando
+            child: cargando
                 ? Center(
                     child: CircularProgressIndicator(color: moradoPrincipal),
                   )
@@ -729,8 +695,6 @@ Widget _buildPedidoCard(Order pedido, Color moradoPrincipal) {
                         },
                       ),
           ),
-
-          // --- BOTÓN RESUMEN DEL DÍA ---
           SafeArea(
             top: false,
             child: Padding(

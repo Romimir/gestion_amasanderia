@@ -4,6 +4,7 @@ version: 1.0.0+1
 
 environment:
   sdk: ^3.13.0
+  
 dependencies:
   flutter:
     sdk: flutter
@@ -11,23 +12,29 @@ dependencies:
   logger: ^2.7.0
   sqflite: ^2.4.6
   path: ^1.9.1
+  provider: ^6.1.1
+  share_plus: ^10.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
-
   uses-material-design: true
-
   assets:
     - lib/assets/icons/
-
+    - lib/assets/encuesta_qa.json
   fonts:
     - family: BerlinSans
       fonts:
         - asset: lib/assets/fonts/berlin.ttf
         - asset: lib/assets/fonts/berlin_demi.ttf
           weight: 700
+
+flutter_launcher_icons:
+  image_path: "lib/assets/icons/logo.png"
+  android: true
+  ios: true
+  background_color: "#00000000"
