@@ -14,6 +14,8 @@ dependencies:
   path: ^1.9.1
   provider: ^6.1.1
   share_plus: ^10.0.0
+  supabase_flutter: ^2.18.3
+  flutter_dotenv: ^6.0.2
 
 dev_dependencies:
   flutter_test:
@@ -26,6 +28,7 @@ flutter:
   assets:
     - lib/assets/icons/
     - lib/assets/encuesta_qa.json
+    - .env
   fonts:
     - family: BerlinSans
       fonts:

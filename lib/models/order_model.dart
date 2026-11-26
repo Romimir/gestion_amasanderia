@@ -10,6 +10,8 @@ class Order {
   final String estadoPago;
   final String estadoEntrega;
   final int total;
+  final String creadoPor;
+  final String? editadoPor;
 
   Order({
     this.id,
@@ -23,6 +25,8 @@ class Order {
     required this.estadoPago,
     this.estadoEntrega = 'Por retirar',
     required this.total,
+    this.creadoPor = 'Sistema',
+    this.editadoPor,
   });
 
   Map<String, dynamic> toMap() {
@@ -38,6 +42,8 @@ class Order {
       'estadoPago': estadoPago,
       'estadoEntrega': estadoEntrega,
       'total': total,
+      'creadoPor': creadoPor,
+      'editadoPor': editadoPor,
     };
   }
 
@@ -54,6 +60,8 @@ class Order {
       estadoPago: map['estadoPago'] as String,
       estadoEntrega: (map['estadoEntrega'] as String?) ?? 'Por retirar',
       total: map['total'] as int,
+      creadoPor: (map['creadoPor'] as String?) ?? 'Sistema',
+      editadoPor: map['editadoPor'] as String?,
     );
   }
 
@@ -69,6 +77,8 @@ class Order {
     String? estadoPago,
     String? estadoEntrega,
     int? total,
+    String? creadoPor,
+    String? editadoPor,
   }) {
     return Order(
       id: id ?? this.id,
@@ -82,6 +92,8 @@ class Order {
       estadoPago: estadoPago ?? this.estadoPago,
       estadoEntrega: estadoEntrega ?? this.estadoEntrega,
       total: total ?? this.total,
+      creadoPor: creadoPor ?? this.creadoPor,
+      editadoPor: editadoPor ?? this.editadoPor,
     );
   }
 }

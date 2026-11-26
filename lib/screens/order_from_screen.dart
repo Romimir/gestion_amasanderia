@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/order_model.dart';
 import '../viewmodel/order_viewmodel.dart';
+import 'package:gestion_amasanderia/viewmodel/auth_viewmodel.dart';
 
 class OrderFormScreen extends StatefulWidget {
   final Order? pedidoEditar;
@@ -366,9 +367,23 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
           telefonoDigitos.isNotEmpty ? '9$telefonoDigitos' : '';
 
       final viewModel = context.read<OrderViewModel>();
+      final String empleadoActual =
+          context.read<AuthViewModel>().nombreEmpleado;
 
       if (_esEdicion) {
-        final Order pedidoActualizado = widget.pedidoEditar!.copyWith(
+        final original = widget.pedidoEditar!;
+        final bool huboCambios = original.cliente != _clienteController.text.trim() ||
+            original.contacto != contactoCompleto ||
+            original.fecha != _fechaController.text ||
+            original.hora != _horaController.text ||
+            original.tipoMasa != _tipoMasa ||
+            original.medidaMasa != _medidaMasa ||
+            original.cantidad != cantidad ||
+            original.estadoPago != _estadoPago ||
+            original.estadoEntrega != _estadoEntrega ||
+            original.total != totalMasas;
+
+        final Order pedidoActualizado = original.copyWith(
           cliente: _clienteController.text.trim(),
           contacto: contactoCompleto,
           fecha: _fechaController.text,
@@ -379,6 +394,8 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
           estadoPago: _estadoPago,
           estadoEntrega: _estadoEntrega,
           total: totalMasas,
+          creadoPor: original.creadoPor, // Conserva siempre al autor original
+          editadoPor: huboCambios ? empleadoActual : original.editadoPor,
         );
 
         await viewModel.actualizarPedido(pedidoActualizado);
@@ -401,6 +418,8 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
           estadoPago: _estadoPago,
           estadoEntrega: 'Por retirar',
           total: totalMasas,
+          creadoPor: empleadoActual,
+          editadoPor: null,
         );
 
         await viewModel.agregarPedido(nuevoPedido);
@@ -412,13 +431,10 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
         );
         Navigator.pop(context, true);
       }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _guardando = false);
-      _mostrarNotificacionSuperior(
-        'Ocurrió un error al guardar el pedido.',
-        icono: Icons.error_outline,
-      );
+    } finally {
+      if (mounted) {
+        setState(() => _guardando = false);
+      }
     }
   }
 

@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Creamos una propiedad estática para poder llamarla sin instanciar la clase
   static ThemeData get lightTheme {
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
+      colorScheme: ColorScheme.fromSeed(seedColor: Color.fromARGB(255, 116, 64, 142)),
       useMaterial3: true,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.purple,
+        backgroundColor: Color.fromARGB(255, 116, 64, 142),
         foregroundColor: Colors.white,
         centerTitle: true,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.purple,
+          backgroundColor: Color.fromARGB(255, 116, 64, 142),
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),

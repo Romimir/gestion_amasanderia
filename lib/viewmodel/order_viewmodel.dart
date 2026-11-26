@@ -27,8 +27,12 @@ class OrderViewModel extends ChangeNotifier {
     await cargarPedidos();
   }
 
-  Future<void> actualizarEstado(int id, String nuevoEstado) async {
-    await DatabaseHelper.instance.updateEstadoEntrega(id, nuevoEstado);
+  Future<void> actualizarEstado(int id, String nuevoEstado, {String? editadoPor}) async {
+    await DatabaseHelper.instance.updateEstadoEntrega(
+      id,
+      nuevoEstado,
+      editadoPor: editadoPor,
+    );
     await cargarPedidos();
   }
 

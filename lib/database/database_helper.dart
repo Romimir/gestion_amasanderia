@@ -14,17 +14,17 @@ class DatabaseHelper {
     return _database!;
   }
 
-  Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+Future<Database> _initDB(String filePath) async {
+  final dbPath = await getDatabasesPath();
+  final path = join(dbPath, filePath);
 
-    return await openDatabase(
-      path,
-      version: 2,
-      onCreate: _createDB,
-      onUpgrade: _upgradeDB,
-    );
-  }
+  return await openDatabase(
+    path,
+    version: 3,
+    onCreate: _createDB,
+    onUpgrade: _upgradeDB,
+  );
+}
 
   Future<void> _createDB(Database db, int version) async {
     await db.execute('''
@@ -39,7 +39,9 @@ class DatabaseHelper {
         cantidad INTEGER NOT NULL,
         estadoPago TEXT NOT NULL,
         estadoEntrega TEXT NOT NULL DEFAULT 'Por retirar',
-        total INTEGER NOT NULL
+        total INTEGER NOT NULL,
+        creadoPor TEXT NOT NULL DEFAULT 'Sistema',
+        editadoPor TEXT
       )
     ''');
   }
@@ -48,6 +50,14 @@ class DatabaseHelper {
     if (oldVersion < 2) {
       await db.execute(
         "ALTER TABLE pedidos ADD COLUMN estadoEntrega TEXT NOT NULL DEFAULT 'Por retirar'",
+      );
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+        "ALTER TABLE pedidos ADD COLUMN creadoPor TEXT NOT NULL DEFAULT 'Sistema'",
+      );
+      await db.execute(
+        "ALTER TABLE pedidos ADD COLUMN editadoPor TEXT",
       );
     }
   }
@@ -120,25 +130,31 @@ class DatabaseHelper {
     );
   }
 
-  Future<int> updateEstadoPago(int id, String nuevoEstado) async {
-    final db = await instance.database;
-    return await db.update(
-      'pedidos',
-      {'estadoPago': nuevoEstado},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
+Future<int> updateEstadoPago(int id, String nuevoEstado, {String? editadoPor}) async {
+  final db = await instance.database;
+  return await db.update(
+    'pedidos',
+    {
+      'estadoPago': nuevoEstado,
+      'editadoPor': ?editadoPor,
+    },
+    where: 'id = ?',
+    whereArgs: [id],
+  );
+}
 
-  Future<int> updateEstadoEntrega(int id, String nuevoEstado) async {
-    final db = await instance.database;
-    return await db.update(
-      'pedidos',
-      {'estadoEntrega': nuevoEstado},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
+Future<int> updateEstadoEntrega(int id, String nuevoEstado, {String? editadoPor}) async {
+  final db = await instance.database;
+  return await db.update(
+    'pedidos',
+    {
+      'estadoEntrega': nuevoEstado,
+      'editadoPor': ?editadoPor,
+    },
+    where: 'id = ?',
+    whereArgs: [id],
+  );
+}
 
   Future<int> deletePedido(int id) async {
     final db = await instance.database;

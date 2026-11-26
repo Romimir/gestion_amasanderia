@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/order_model.dart';
+import '../viewmodel/auth_viewmodel.dart';
 import '../viewmodel/order_viewmodel.dart';
 import 'order_from_screen.dart';
 
@@ -63,7 +64,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     if (DateTime.now().isAfter(fechaRetiro.add(const Duration(days: 2)))) {
       await viewModel.actualizarEstado(_pedido.id!, 'No retirado');
-      
+
       if (!mounted) return;
       setState(() {
         _pedido = _pedido.copyWith(estadoEntrega: 'No retirado');
@@ -243,14 +244,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
 
     final viewModel = context.read<OrderViewModel>();
+    final empleadoActual = context.read<AuthViewModel>().nombreEmpleado;
     setState(() => _procesando = true);
 
     try {
-      await viewModel.actualizarEstado(_pedido.id!, _estadoEntregaSeleccionado);
-      
+      await viewModel.actualizarEstado(
+        _pedido.id!,
+        _estadoEntregaSeleccionado,
+        editadoPor: empleadoActual,
+      );
+
       if (!mounted) return;
       setState(() {
-        _pedido = _pedido.copyWith(estadoEntrega: _estadoEntregaSeleccionado);
+        _pedido = _pedido.copyWith(
+          estadoEntrega: _estadoEntregaSeleccionado,
+          editadoPor: empleadoActual,
+        );
         _huboCambios = true;
         _procesando = false;
       });
@@ -311,7 +320,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     try {
       await viewModel.eliminarPedido(_pedido.id!);
-      
+
       if (!mounted) return;
       Navigator.pop(context, true);
     } catch (_) {
@@ -617,7 +626,61 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 18),
+              // Firmas de autoria para quien agenda o edita pedidos
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_pin_outlined,
+                          size: 18,
+                          color: moradoPrincipal,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Agendado por: ${_pedido.creadoPor}',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: moradoPrincipal,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_pedido.editadoPor != null &&
+                        _pedido.editadoPor!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.edit_note,
+                            size: 18,
+                            color: moradoPrincipal,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Editado por: ${_pedido.editadoPor}',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: moradoPrincipal,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -625,11 +688,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       ? null
                       : () => _guardarEstadoEntrega(moradoPrincipal),
                   icon: const Icon(Icons.save_outlined),
-                  label: Text(
-                    hayCambioEntrega
-                        ? 'Guardar Estado de Entrega'
-                        : 'Estado de Entrega Guardado',
-                    style: const TextStyle(
+                  label: const Text(
+                    'Guardar Estado de Entrega',
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -641,10 +702,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton.icon(
+                child: ElevatedButton.icon(
                   onPressed: _procesando
                       ? null
                       : () => _confirmarYEliminar(moradoPrincipal),
@@ -656,10 +717,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.black87,
-                    side: const BorderSide(color: Colors.black54, width: 1.5),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
               ),
